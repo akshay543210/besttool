@@ -65,6 +65,40 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
       return;
     }
 
+    // Validate required fields
+    if (!formData.symbol || !formData.side || !formData.result) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate risk percentage
+    const riskPercentage = parseFloat(formData.risk_percentage);
+    if (isNaN(riskPercentage) || riskPercentage <= 0 || riskPercentage > 100) {
+      toast({
+        title: "Error",
+        description: "Risk percentage must be between 0.1 and 100",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate R:R ratio if provided
+    if (formData.rr) {
+      const rr = parseFloat(formData.rr);
+      if (isNaN(rr) || rr <= 0) {
+        toast({
+          title: "Error",
+          description: "R:R ratio must be a positive number",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -77,7 +111,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         rr: formData.rr ? Number(formData.rr) : null,
         result: formData.result,
         notes: formData.notes || null,
-        risk_percentage: formData.risk_percentage ? Number(formData.risk_percentage) : null,
+        risk_percentage: riskPercentage,
       };
 
       const { error } = await supabase
@@ -120,7 +154,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">Date *</Label>
               <Input
                 id="date"
                 type="date"
@@ -131,18 +165,19 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
             </div>
 
             <div>
-              <Label htmlFor="symbol">Symbol</Label>
+              <Label htmlFor="symbol">Symbol *</Label>
               <Input
                 id="symbol"
                 value={formData.symbol}
-                onChange={(e) => handleInputChange('symbol', e.target.value)}
+                onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
                 placeholder="e.g., EURUSD, GOLD"
+                required
               />
             </div>
 
             <div>
-              <Label htmlFor="side">Side</Label>
-              <Select value={formData.side} onValueChange={(value) => handleInputChange('side', value)}>
+              <Label htmlFor="side">Side *</Label>
+              <Select value={formData.side} onValueChange={(value) => handleInputChange('side', value)} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select side" />
                 </SelectTrigger>
@@ -164,6 +199,10 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
                   <SelectItem value="NY Open">NY Open</SelectItem>
                   <SelectItem value="London">London</SelectItem>
                   <SelectItem value="NY Close">NY Close</SelectItem>
+                  <SelectItem value="ORB">ORB</SelectItem>
+                  <SelectItem value="Breakout">Breakout</SelectItem>
+                  <SelectItem value="Retracement">Retracement</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -191,16 +230,17 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
             </div>
 
             <div>
-              <Label htmlFor="risk_percentage">Risk Percentage (%)</Label>
+              <Label htmlFor="risk_percentage">Risk Percentage (%) *</Label>
               <Input
                 id="risk_percentage"
                 type="number"
                 step="0.1"
                 min="0.1"
-                max="10"
+                max="100"
                 value={formData.risk_percentage}
                 onChange={(e) => handleInputChange('risk_percentage', e.target.value)}
                 placeholder="1.0"
+                required
               />
               {activeAccount && formData.risk_percentage && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -210,8 +250,8 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
             </div>
 
             <div>
-              <Label htmlFor="result">Result</Label>
-              <Select value={formData.result} onValueChange={(value) => handleInputChange('result', value)}>
+              <Label htmlFor="result">Result *</Label>
+              <Select value={formData.result} onValueChange={(value) => handleInputChange('result', value)} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select result" />
                 </SelectTrigger>
