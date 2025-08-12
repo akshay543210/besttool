@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, CalendarIcon, Tag } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import {
   Table,
@@ -21,59 +18,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface TradeIdea {
-  id: string;
-  title: string;
-  description: string;
-  session: string;
-  strategy_tag: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { useTradeIdeas } from '@/hooks/useTradeIdeas';
 
 export default function TradeIdeasPage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [tradeIdeas, setTradeIdeas] = useState<TradeIdea[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { tradeIdeas, loading, refetchTradeIdeas } = useTradeIdeas();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingIdea, setEditingIdea] = useState<TradeIdea | null>(null);
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     session: '',
     strategy_tag: '',
   });
-
-  const fetchTradeIdeas = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('trade_ideas')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTradeIdeas(data || []);
-    } catch (error) {
-      console.error('Error fetching trade ideas:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch trade ideas",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTradeIdeas();
-  }, [user]);
 
   const resetForm = () => {
     setFormData({
@@ -82,15 +38,15 @@ export default function TradeIdeasPage() {
       session: '',
       strategy_tag: '',
     });
-    setEditingIdea(null);
+    setEditingIdeaId(null);
   };
 
-  const handleOpenDialog = (idea?: TradeIdea) => {
+  const handleOpenDialog = (idea?: any) => {
     if (idea) {
-      setEditingIdea(idea);
+      setEditingIdeaId(idea.id);
       setFormData({
         title: idea.title,
-        description: idea.description,
+        description: idea.description || '',
         session: idea.session,
         strategy_tag: idea.strategy_tag || '',
       });
@@ -107,91 +63,27 @@ export default function TradeIdeasPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to save trade ideas",
-        variant: "destructive",
+    
+    if (editingIdeaId) {
+      await updateTradeIdea(editingIdeaId, {
+        title: formData.title,
+        description: formData.description,
+        session: formData.session,
+        strategy_tag: formData.strategy_tag || null,
       });
-      return;
-    }
-
-    try {
-      if (editingIdea) {
-        // Update existing idea
-        const { error } = await supabase
-          .from('trade_ideas')
-          .update({
-            title: formData.title,
-            description: formData.description,
-            session: formData.session,
-            strategy_tag: formData.strategy_tag || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', editingIdea.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Trade idea updated successfully",
-        });
-      } else {
-        // Create new idea
-        const { error } = await supabase
-          .from('trade_ideas')
-          .insert({
-            user_id: user.id,
-            title: formData.title,
-            description: formData.description,
-            session: formData.session,
-            strategy_tag: formData.strategy_tag || null,
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Trade idea saved successfully",
-        });
-      }
-
-      fetchTradeIdeas();
-      handleCloseDialog();
-    } catch (error) {
-      console.error('Error saving trade idea:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save trade idea",
-        variant: "destructive",
+    } else {
+      await createTradeIdea({
+        title: formData.title,
+        description: formData.description,
+        session: formData.session,
+        strategy_tag: formData.strategy_tag || null,
       });
     }
+
+    handleCloseDialog();
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('trade_ideas')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Trade idea deleted successfully",
-      });
-
-      fetchTradeIdeas();
-    } catch (error) {
-      console.error('Error deleting trade idea:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete trade idea",
-        variant: "destructive",
-      });
-    }
-  };
+  const { createTradeIdea, updateTradeIdea, deleteTradeIdea } = useTradeIdeas();
 
   return (
     <div className="space-y-6">
@@ -209,7 +101,7 @@ export default function TradeIdeasPage() {
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{editingIdea ? 'Edit Trade Idea' : 'New Trade Idea'}</DialogTitle>
+              <DialogTitle>{editingIdeaId ? 'Edit Trade Idea' : 'New Trade Idea'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -268,7 +160,7 @@ export default function TradeIdeasPage() {
 
               <div className="flex gap-2 pt-4">
                 <Button type="submit" className="flex-1">
-                  {editingIdea ? 'Update Idea' : 'Save Idea'}
+                  {editingIdeaId ? 'Update Idea' : 'Save Idea'}
                 </Button>
                 <Button 
                   type="button" 
@@ -370,7 +262,7 @@ export default function TradeIdeasPage() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => handleDelete(idea.id)}
+                                onClick={() => deleteTradeIdea(idea.id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Delete
