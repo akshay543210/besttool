@@ -6,6 +6,8 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { Button } from "@/components/ui/button";
 import { NewTradeModal } from "./NewTradeModal";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { TradeIdeas } from "./TradeIdeas";
+
 const mainItems = [{
   title: "Dashboard",
   url: "/",
@@ -19,6 +21,7 @@ const mainItems = [{
   url: "/calendar",
   icon: Calendar
 }];
+
 const otherItems = [{
   title: "Settings",
   url: "/settings",
@@ -28,6 +31,7 @@ const otherItems = [{
   url: "/help",
   icon: HelpCircle
 }];
+
 export function AppSidebar() {
   const {
     state
@@ -69,9 +73,9 @@ export function AppSidebar() {
               <BarChart3 className="w-4 h-4 text-white" />
             </div>
             {!collapsed && <div>
-              <h2 className="text-lg font-bold text-sidebar-foreground">PropFirm Journal</h2>
-              <p className="text-xs text-sidebar-foreground/60">Knowledge Dashboard</p>
-            </div>}
+                <h2 className="text-lg font-bold text-sidebar-foreground">PropFirm Journal</h2>
+                <p className="text-xs text-sidebar-foreground/60">Knowledge Dashboard</p>
+              </div>}
           </div>
         </div>
 
@@ -104,23 +108,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Actions */}
+        {/* Trade Ideas */}
         <SidebarGroup>
-          <SidebarGroupLabel>Trade ideas
-
-        </SidebarGroupLabel>
+          <SidebarGroupLabel>Trade Ideas</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <NewTradeModal onTradeAdded={() => window.location.reload()} />
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <TradeIdeas />
           </SidebarGroupContent>
         </SidebarGroup>
 
