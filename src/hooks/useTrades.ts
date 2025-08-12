@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -196,20 +195,37 @@ export function useTrades() {
     const losses = trades.filter(t => t.result.toLowerCase() === 'loss');
     const breakevens = trades.filter(t => t.result.toLowerCase() === 'breakeven');
 
-    const winRRs = wins.map(t => t.rr || 0).filter(rr => rr > 0);
-    const lossRRs = losses.map(t => Math.abs(t.rr || 0)).filter(rr => rr > 0);
+    // Calculate total P&L using actual pnl_dollar values when available
+    const totalWinPnL = wins.reduce((sum, trade) => sum + (trade.pnl_dollar || 0), 0);
+    const totalLossPnL = losses.reduce((sum, trade) => sum + Math.abs(trade.pnl_dollar || 0), 0);
+    
+    // For R:R based calculations when pnl_dollar is not available
+    const winRRs = wins
+      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
+      .map(t => t.rr || 0)
+      .filter(rr => rr > 0);
+      
+    const lossRRs = losses
+      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
+      .map(t => Math.abs(t.rr || 0))
+      .filter(rr => rr > 0);
 
     const avgWinRR = winRRs.length > 0 ? winRRs.reduce((a, b) => a + b, 0) / winRRs.length : 0;
     const avgLossRR = lossRRs.length > 0 ? lossRRs.reduce((a, b) => a + b, 0) / lossRRs.length : 0;
     
     const totalWinRR = winRRs.reduce((a, b) => a + b, 0);
     const totalLossRR = lossRRs.reduce((a, b) => a + b, 0);
-    const profitFactor = totalLossRR > 0 ? totalWinRR / totalLossRR : totalWinRR > 0 ? Infinity : 0;
+    
+    // Calculate profit factor using actual P&L when available, fallback to R:R
+    const profitFactor = totalLossPnL > 0 ? totalWinPnL / totalLossPnL : 
+                        totalLossRR > 0 ? totalWinRR / totalLossRR : 
+                        totalWinPnL > 0 || totalWinRR > 0 ? Infinity : 0;
 
     // Calculate streaks
     let currentWinStreak = 0;
     let currentLossStreak = 0;
     
+    // Calculate from most recent trade backwards
     for (let i = 0; i < trades.length; i++) {
       const result = trades[i].result.toLowerCase();
       if (result === 'win') {
@@ -222,13 +238,13 @@ export function useTrades() {
         currentWinStreak = 0;
         currentLossStreak = 0;
       }
-      
-      if (currentWinStreak > 0 || currentLossStreak > 0) break;
     }
 
     const topWinRR = winRRs.length > 0 ? Math.max(...winRRs) : 0;
     const topLossRR = lossRRs.length > 0 ? Math.max(...lossRRs) : 0;
-    const totalRR = totalWinRR - totalLossRR;
+    
+    // Calculate total RR using actual P&L when available
+    const totalRR = totalWinPnL - totalLossPnL;
 
     return {
       totalTrades: trades.length,
