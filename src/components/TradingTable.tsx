@@ -35,6 +35,7 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
 
   const handleDelete = async (tradeId: string) => {
     await deleteTrade(tradeId);
+    // Ensure account balance is recalculated after deletion
     onTradeUpdated();
   };
 

@@ -112,6 +112,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         result: formData.result,
         notes: formData.notes || null,
         risk_percentage: riskPercentage,
+        updated_at: new Date().toISOString(),
       };
 
       const { error } = await supabase
@@ -126,6 +127,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         description: "Trade has been updated successfully.",
       });
 
+      // Trigger a full refresh to recalculate account balance
       onTradeUpdated();
       onClose();
     } catch (err) {

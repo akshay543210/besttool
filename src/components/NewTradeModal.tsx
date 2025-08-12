@@ -173,6 +173,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
           notes: formData.notes || null,
           image_url: imageUrl,
           risk_percentage: riskPercentage,
+          updated_at: new Date().toISOString(),
         });
 
       if (error) {
@@ -189,6 +190,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         
         resetForm();
         setOpen(false);
+        // Ensure account balance is recalculated after adding new trade
         onTradeAdded?.();
       }
     } catch (error) {
