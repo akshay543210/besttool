@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NewTradeModal } from "./NewTradeModal";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { TradeIdeas } from "./TradeIdeas";
+import { useTrades } from "@/hooks/useTrades";
 
 const mainItems = [{
   title: "Dashboard",
@@ -43,6 +44,7 @@ export function AppSidebar() {
     getActiveAccount,
     refetchAccounts
   } = useAccounts();
+  const { calculateStats } = useTrades();
   const location = useLocation();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
@@ -58,12 +60,20 @@ export function AppSidebar() {
       window.removeEventListener('activeAccountChanged', handleActiveAccountChange);
     };
   }, [refetchAccounts]);
+  
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({
     isActive
   }: {
     isActive: boolean;
   }) => isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50";
+
+  // Calculate real P&L from trades
+  const stats = calculateStats;
+  const currentBalance = activeAccount ? activeAccount.current_balance : 0;
+  const startingBalance = activeAccount ? activeAccount.starting_balance : 0;
+  const pnl = currentBalance - startingBalance;
+
   return <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarContent>
         {/* Header */}
@@ -83,11 +93,10 @@ export function AppSidebar() {
         {!collapsed && activeAccount && <div className="p-4 border-b border-sidebar-border">
             <div className="text-sidebar-foreground/60 text-sm">Portfolio Value</div>
             <div className="text-2xl font-bold text-sidebar-foreground">
-              ${activeAccount.current_balance.toLocaleString()}
+              ${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className={`text-xs ${activeAccount.current_balance >= activeAccount.starting_balance ? 'text-success' : 'text-destructive'}`}>
-              {activeAccount.current_balance >= activeAccount.starting_balance ? '+' : ''}
-              ${(activeAccount.current_balance - activeAccount.starting_balance).toLocaleString()} 
+            <div className={`text-xs ${pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {pnl >= 0 ? '+' : ''}${pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
               ({activeAccount.name})
             </div>
           </div>}
