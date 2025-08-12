@@ -91,14 +91,28 @@ export function useTrades() {
     if (!activeAccount || trades.length === 0) return;
 
     try {
-      // Calculate total P&L from all trades
+      // Calculate total P&L from all trades for this account
       const totalPnL = trades.reduce((sum, trade) => {
-        return sum + (trade.pnl_dollar || 0);
+        // Use actual pnl_dollar if available, otherwise calculate from R:R
+        if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
+          return sum + trade.pnl_dollar;
+        }
+        
+        // Fallback calculation using R:R ratio
+        if (trade.result.toLowerCase() === 'win') {
+          const riskAmount = activeAccount.current_balance * (activeAccount.risk_per_trade / 100);
+          return sum + (riskAmount * (trade.rr || 0));
+        } else if (trade.result.toLowerCase() === 'loss') {
+          const riskAmount = activeAccount.current_balance * (activeAccount.risk_per_trade / 100);
+          return sum - riskAmount;
+        }
+        return sum; // breakeven
       }, 0);
 
       // Update account balance
       const newBalance = activeAccount.starting_balance + totalPnL;
       
+      // Only update if there's a significant change (more than $0.01)
       if (Math.abs(newBalance - activeAccount.current_balance) > 0.01) {
         await updateAccount(activeAccount.id, {
           current_balance: newBalance
