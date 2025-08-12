@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TimeFilter } from './TimeFilter';
@@ -97,14 +96,17 @@ export function TradingDashboard() {
         avgWin: 0,
         avgLoss: 0,
         totalPnL: 0,
-        pnlPercentage: 0
+        pnlPercentage: 0,
+        profitFactor: 0,
+        bestDay: 0,
+        currentStreak: 0
       };
     }
 
     const wins = filteredTrades.filter(t => t.result === 'Win').length;
     const losses = filteredTrades.filter(t => t.result === 'Loss').length;
     const breakevens = filteredTrades.filter(t => t.result === 'Breakeven').length;
-    const winRate = filteredTrades.length > 0 ? wins / filteredTrades.length * 100 : 0;
+    const winRate = filteredTrades.length > 0 ? (wins / filteredTrades.length) * 100 : 0;
 
     const winTrades = filteredTrades.filter(t => t.result === 'Win');
     const lossTrades = filteredTrades.filter(t => t.result === 'Loss');
@@ -115,6 +117,37 @@ export function TradingDashboard() {
     const totalPnL = filteredTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0);
     const pnlPercentage = activeAccount ? (totalPnL / activeAccount.starting_balance) * 100 : 0;
 
+    // Calculate profit factor
+    const grossWins = winTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0);
+    const grossLosses = Math.abs(lossTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0));
+    const profitFactor = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? Infinity : 0;
+
+    // Calculate best day
+    const tradesByDate: Record<string, number> = {};
+    filteredTrades.forEach(trade => {
+      const date = new Date(trade.date).toDateString();
+      if (!tradesByDate[date]) tradesByDate[date] = 0;
+      tradesByDate[date] += trade.pnl_dollar || 0;
+    });
+    const bestDay = Math.max(...Object.values(tradesByDate));
+
+    // Calculate current streak
+    let currentStreak = 0;
+    let lastResult = '';
+    for (let i = 0; i < filteredTrades.length; i++) {
+      const trade = filteredTrades[i];
+      if (i === 0) {
+        currentStreak = 1;
+        lastResult = trade.result;
+      } else {
+        if (trade.result === lastResult) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
+    }
+
     return {
       totalTrades: filteredTrades.length,
       wins,
@@ -124,7 +157,10 @@ export function TradingDashboard() {
       avgWin,
       avgLoss,
       totalPnL,
-      pnlPercentage
+      pnlPercentage,
+      profitFactor,
+      bestDay,
+      currentStreak
     };
   }, [filteredTrades, activeAccount]);
 
@@ -310,6 +346,42 @@ export function TradingDashboard() {
       }}>
           <StatsCard title="PNL %" value={`${stats.pnlPercentage > 0 ? '+' : ''}${stats.pnlPercentage.toFixed(2)}%`} positive={stats.pnlPercentage >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
+        
+        <motion.div initial={{
+        opacity: 0,
+        y: 20
+      }} animate={{
+        opacity: 1,
+        y: 0
+      }} transition={{
+        delay: 0.9
+      }}>
+          <StatsCard title="PROFIT FACTOR" value={stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)} positive={stats.profitFactor > 1} icon={<BarChart3 className="w-5 h-5" />} />
+        </motion.div>
+        
+        <motion.div initial={{
+        opacity: 0,
+        y: 20
+      }} animate={{
+        opacity: 1,
+        y: 0
+      }} transition={{
+        delay: 1.0
+      }}>
+          <StatsCard title="BEST DAY" value={`${stats.bestDay > 0 ? '+' : ''}$${stats.bestDay.toFixed(2)}`} positive={stats.bestDay >= 0} icon={<TrendingUp className="w-5 h-5" />} />
+        </motion.div>
+        
+        <motion.div initial={{
+        opacity: 0,
+        y: 20
+      }} animate={{
+        opacity: 1,
+        y: 0
+      }} transition={{
+        delay: 1.1
+      }}>
+          <StatsCard title="STREAK" value={stats.currentStreak.toString()} positive={stats.currentStreak > 0} icon={<Target className="w-5 h-5" />} />
+        </motion.div>
       </div>
 
       {/* Action Buttons */}
@@ -325,7 +397,7 @@ export function TradingDashboard() {
       opacity: 1,
       y: 0
     }} transition={{
-      delay: 0.9
+      delay: 1.2
     }}>
         <TradingTable trades={filteredTrades} onTradeUpdated={refetchTrades} />
       </motion.div>
@@ -336,7 +408,7 @@ export function TradingDashboard() {
     }} animate={{
       opacity: 1
     }} transition={{
-      delay: 1
+      delay: 1.3
     }} className="text-center p-8 bg-muted/20 rounded-lg border border-border">
           <p className="text-muted-foreground">
             No trades found for the selected time period. Start by adding your first trade!
