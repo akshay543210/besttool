@@ -114,6 +114,11 @@ export function TradingDashboard() {
       </div>;
   }
 
+  // Calculate portfolio value and P&L
+  const portfolioValue = activeAccount ? activeAccount.current_balance : 0;
+  const startingBalance = activeAccount ? activeAccount.starting_balance : 0;
+  const portfolioPnL = activeAccount ? portfolioValue - startingBalance : 0;
+
   return <motion.div initial={{
     opacity: 0,
     y: 20
@@ -141,14 +146,13 @@ export function TradingDashboard() {
           {/* Portfolio Balance */}
           <div className="text-right bg-card p-4 rounded-lg border border-border">
             <div className="text-2xl font-bold text-foreground">
-              {activeAccount ? `$${activeAccount.current_balance.toLocaleString()}` : '$0'}
+              ${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-sm text-muted-foreground">
               {activeAccount ? activeAccount.name : 'No Active Account'}
             </div>
-            {activeAccount && <div className={`text-sm font-medium ${activeAccount.current_balance >= activeAccount.starting_balance ? 'text-success' : 'text-destructive'}`}>
-                P&L: {activeAccount.current_balance >= activeAccount.starting_balance ? '+' : ''}
-                ${(activeAccount.current_balance - activeAccount.starting_balance).toLocaleString()}
+            {activeAccount && <div className={`text-sm font-medium ${portfolioPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
+                P&L: {portfolioPnL >= 0 ? '+' : ''}${portfolioPnL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>}
           </div>
 
@@ -259,7 +263,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.7
       }}>
-          <StatsCard title="PNL $" value={`${stats.totalRR > 0 ? '+' : ''}$${(stats.totalRR * (activeAccount?.current_balance || 0) * 0.01).toFixed(2)}`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL $" value={`${stats.totalRR > 0 ? '+' : ''}$${stats.totalRR.toFixed(2)}`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -271,7 +275,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.8
       }}>
-          <StatsCard title="PNL %" value={`${stats.totalRR > 0 ? '+' : ''}${stats.totalRR.toFixed(2)}%`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL %" value={`${stats.totalRR > 0 ? '+' : ''}${(stats.totalRR / (activeAccount?.current_balance || 1) * 100).toFixed(2)}%`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
