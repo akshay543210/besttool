@@ -91,19 +91,19 @@ export function useTrades() {
     if (!activeAccount || trades.length === 0) return;
 
     try {
-      // Calculate total P&L from all trades for this account
+      // Calculate total P&L from all trades for this account using 1% of starting balance
+      const riskAmount = activeAccount.starting_balance * 0.01; // 1% of starting balance
+      
       const totalPnL = trades.reduce((sum, trade) => {
-        // Use actual pnl_dollar if available, otherwise calculate from R:R
+        // Use actual pnl_dollar if available
         if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
           return sum + trade.pnl_dollar;
         }
         
-        // Fallback calculation using R:R ratio
+        // Calculate P&L based on R:R ratio and 1% risk
         if (trade.result.toLowerCase() === 'win') {
-          const riskAmount = activeAccount.current_balance * (activeAccount.risk_per_trade / 100);
           return sum + (riskAmount * (trade.rr || 0));
         } else if (trade.result.toLowerCase() === 'loss') {
-          const riskAmount = activeAccount.current_balance * (activeAccount.risk_per_trade / 100);
           return sum - riskAmount;
         }
         return sum; // breakeven
@@ -169,14 +169,13 @@ export function useTrades() {
   const calculatePnL = useCallback((trade: Trade, account?: Account): number => {
     if (!account) return 0;
     
-    // Use the actual pnl_dollar if available, otherwise calculate based on R:R
+    // Use the actual pnl_dollar if available
     if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
       return trade.pnl_dollar;
     }
     
-    // Calculate risk amount using trade's risk percentage or account default
-    const riskPercentage = trade.risk_percentage || account.risk_per_trade;
-    const riskAmount = account.current_balance * (riskPercentage / 100);
+    // Calculate risk amount using 1% of starting balance
+    const riskAmount = account.starting_balance * 0.01;
     
     if (trade.result.toLowerCase() === 'win') {
       return riskAmount * (trade.rr || 0);
@@ -214,6 +213,7 @@ export function useTrades() {
     const totalLossPnL = losses.reduce((sum, trade) => sum + Math.abs(trade.pnl_dollar || 0), 0);
     
     // For R:R based calculations when pnl_dollar is not available
+    const riskAmount = activeAccount ? activeAccount.starting_balance * 0.01 : 0;
     const winRRs = wins
       .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
       .map(t => t.rr || 0)
@@ -221,8 +221,8 @@ export function useTrades() {
       
     const lossRRs = losses
       .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
-      .map(t => Math.abs(t.rr || 0))
-      .filter(rr => rr > 0);
+      .map(t => 1) // Loss is always 1R
+      .filter(r => r > 0);
 
     const avgWinRR = winRRs.length > 0 ? winRRs.reduce((a, b) => a + b, 0) / winRRs.length : 0;
     const avgLossRR = lossRRs.length > 0 ? lossRRs.reduce((a, b) => a + b, 0) / lossRRs.length : 0;
@@ -232,8 +232,8 @@ export function useTrades() {
     
     // Calculate profit factor using actual P&L when available, fallback to R:R
     const profitFactor = totalLossPnL > 0 ? totalWinPnL / totalLossPnL : 
-                        totalLossRR > 0 ? totalWinRR / totalLossRR : 
-                        totalWinPnL > 0 || totalWinRR > 0 ? Infinity : 0;
+                        totalLossRR > 0 ? (totalWinRR * riskAmount) / (totalLossRR * riskAmount) : 
+                        totalWinPnL > 0 ? Infinity : 0;
 
     // Calculate streaks
     let currentWinStreak = 0;
@@ -255,7 +255,7 @@ export function useTrades() {
     }
 
     const topWinRR = winRRs.length > 0 ? Math.max(...winRRs) : 0;
-    const topLossRR = lossRRs.length > 0 ? Math.max(...lossRRs) : 0;
+    const topLossRR = 1; // Loss is always 1R
     
     // Calculate total RR using actual P&L when available
     const totalRR = totalWinPnL - totalLossPnL;
@@ -275,7 +275,7 @@ export function useTrades() {
       topLossRR,
       totalRR,
     };
-  }, [trades]);
+  }, [trades, activeAccount?.starting_balance]);
 
   const getTradesByDate = useCallback(() => {
     const tradesByDate: Record<string, Trade[]> = {};
