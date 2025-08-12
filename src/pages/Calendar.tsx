@@ -7,11 +7,14 @@ import { useTrades } from "@/hooks/useTrades";
 import { useAccounts } from "@/hooks/useAccounts";
 import { calculatePnL } from "@/lib/tradingUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, isSameWeek, startOfMonth, endOfMonth } from "date-fns";
+
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const {
     trades,
-    loading
+    loading,
+    calculateStats,
+    calculatePnL: calculatePnLHook
   } = useTrades();
   const {
     getActiveAccount
@@ -58,16 +61,13 @@ const Calendar = () => {
     });
   };
 
-  // Calculate P&L for a day
+  // Calculate P&L for a day using the hook's calculatePnL function
   const getDayPnL = (day: number) => {
     const dayTrades = getTradesForDay(day);
     if (!activeAccount || dayTrades.length === 0) return 0;
+    
     return dayTrades.reduce((total, trade) => {
-      // Use actual pnl_dollar if available, otherwise use calculatePnL
-      if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
-        return total + Number(trade.pnl_dollar);
-      }
-      return total + calculatePnL(trade, activeAccount);
+      return total + calculatePnLHook(trade, activeAccount);
     }, 0);
   };
 
@@ -78,13 +78,11 @@ const Calendar = () => {
       const tradeDate = new Date(trade.date);
       return tradeDate >= weekStart && tradeDate <= weekEnd;
     });
+    
     const weekPnL = activeAccount ? weekTrades.reduce((total, trade) => {
-      // Use actual pnl_dollar if available, otherwise use calculatePnL
-      if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
-        return total + Number(trade.pnl_dollar);
-      }
-      return total + calculatePnL(trade, activeAccount);
+      return total + calculatePnLHook(trade, activeAccount);
     }, 0) : 0;
+    
     return {
       trades: weekTrades.length,
       pnl: weekPnL
@@ -103,6 +101,7 @@ const Calendar = () => {
     }
     return weeks;
   };
+
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
@@ -114,11 +113,12 @@ const Calendar = () => {
       return newDate;
     });
   };
+
   const isToday = (day: number) => {
     return today.getDate() === day && today.getMonth() === currentMonth && today.getFullYear() === currentYear;
   };
 
-  // Calculate total monthly stats
+  // Calculate total monthly stats using the hook's calculateStats
   const monthlyStats = () => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -126,21 +126,25 @@ const Calendar = () => {
       const tradeDate = new Date(trade.date);
       return tradeDate >= monthStart && tradeDate <= monthEnd;
     });
-    const totalPnL = activeAccount ? monthTrades.reduce((total, trade) => {
-      return total + calculatePnL(trade, activeAccount);
+    
+    // Calculate realized P&L (only wins)
+    const realizedPnL = activeAccount ? monthTrades.reduce((total, trade) => {
+      const pnl = calculatePnLHook(trade, activeAccount);
+      return total + (pnl > 0 ? pnl : 0); // Only count positive P&L
     }, 0) : 0;
+    
     return {
-      balance: (activeAccount?.current_balance || 50000) + totalPnL,
-      mll: 0,
-      // Max Loss Limit
-      rpnl: totalPnL > 0 ? totalPnL : 0,
-      // Realized P&L (profits only)
-      upnl: 0 // Unrealized P&L
+      balance: (activeAccount?.current_balance || 50000),
+      mll: 0, // Max Loss Limit - not implemented yet
+      rpnl: realizedPnL, // Realized P&L (profits only)
+      upnl: 0 // Unrealized P&L - not implemented yet
     };
   };
+
   const stats = monthlyStats();
+
   return <div className="min-h-screen bg-background flex">
-      {/* Left Sidebar */}
+      {/* Left Sidebar - removed for brevity */}
       
 
       {/* Main Content */}
@@ -256,4 +260,5 @@ const Calendar = () => {
       </div>
     </div>;
 };
+
 export default Calendar;
