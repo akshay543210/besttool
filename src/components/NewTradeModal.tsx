@@ -106,6 +106,40 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       return;
     }
 
+    // Validate required fields
+    if (!formData.symbol || !formData.side || !formData.result) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate risk percentage
+    const riskPercentage = parseFloat(formData.risk_percentage);
+    if (isNaN(riskPercentage) || riskPercentage <= 0 || riskPercentage > 100) {
+      toast({
+        title: "Error",
+        description: "Risk percentage must be between 0.1 and 100",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate R:R ratio if provided
+    if (formData.rr) {
+      const rr = parseFloat(formData.rr);
+      if (isNaN(rr) || rr <= 0) {
+        toast({
+          title: "Error",
+          description: "R:R ratio must be a positive number",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     
     try {
@@ -138,7 +172,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
           result: formData.result,
           notes: formData.notes || null,
           image_url: imageUrl,
-          risk_percentage: formData.risk_percentage ? Number(formData.risk_percentage) : 1.0,
+          risk_percentage: riskPercentage,
         });
 
       if (error) {
@@ -188,7 +222,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">Date *</Label>
               <Input
                 id="date"
                 type="date"
@@ -199,11 +233,11 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="symbol">Symbol</Label>
+              <Label htmlFor="symbol">Symbol *</Label>
               <Input
                 id="symbol"
                 value={formData.symbol}
-                onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
                 placeholder="e.g., EURUSD, XAUUSD"
                 required
               />
@@ -212,7 +246,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="side">Side</Label>
+              <Label htmlFor="side">Side *</Label>
               <Select
                 value={formData.side}
                 onValueChange={(value) => setFormData({ ...formData, side: value })}
@@ -258,6 +292,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
                 id="rr"
                 type="number"
                 step="0.1"
+                min="0.1"
                 value={formData.rr}
                 onChange={(e) => setFormData({ ...formData, rr: e.target.value })}
                 placeholder="e.g., 1.5"
@@ -265,16 +300,17 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="risk_percentage">Risk Percentage (%)</Label>
+              <Label htmlFor="risk_percentage">Risk Percentage (%) *</Label>
               <Input
                 id="risk_percentage"
                 type="number"
                 step="0.1"
                 min="0.1"
-                max="10"
+                max="100"
                 value={formData.risk_percentage}
                 onChange={(e) => setFormData({ ...formData, risk_percentage: e.target.value })}
                 placeholder="1.0"
+                required
               />
               {activeAccount && formData.risk_percentage && (
                 <p className="text-xs text-muted-foreground">
@@ -286,7 +322,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
 
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="result">Result</Label>
+              <Label htmlFor="result">Result *</Label>
               <Select
                 value={formData.result}
                 onValueChange={(value) => setFormData({ ...formData, result: value })}
