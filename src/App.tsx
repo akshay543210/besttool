@@ -16,6 +16,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import PublicTrade from "./pages/PublicTrade";
 import TradeReview from "./pages/TradeReview";
+import TradeIdeasPage from "./pages/TradeIdeasPage";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
                           <Route path="/review/:tradeId" element={<TradeReview />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="/help" element={<Help />} />
+                          <Route path="/ideas" element={<TradeIdeasPage />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </main>
