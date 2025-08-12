@@ -31,7 +31,8 @@ export function TradingDashboard() {
   const {
     trades,
     loading,
-    refetchTrades
+    refetchTrades,
+    calculateStats
   } = useTrades();
   const {
     getActiveAccount
@@ -85,84 +86,10 @@ export function TradingDashboard() {
     });
   }, [trades, activeFilter]);
 
+  // Use the calculateStats function from useTrades hook for accurate stats
   const stats = useMemo(() => {
-    if (!filteredTrades.length) {
-      return {
-        totalTrades: 0,
-        wins: 0,
-        losses: 0,
-        breakevens: 0,
-        winRate: 0,
-        avgWin: 0,
-        avgLoss: 0,
-        totalPnL: 0,
-        pnlPercentage: 0,
-        profitFactor: 0,
-        bestDay: 0,
-        currentStreak: 0
-      };
-    }
-
-    const wins = filteredTrades.filter(t => t.result === 'Win').length;
-    const losses = filteredTrades.filter(t => t.result === 'Loss').length;
-    const breakevens = filteredTrades.filter(t => t.result === 'Breakeven').length;
-    const winRate = filteredTrades.length > 0 ? (wins / filteredTrades.length) * 100 : 0;
-
-    const winTrades = filteredTrades.filter(t => t.result === 'Win');
-    const lossTrades = filteredTrades.filter(t => t.result === 'Loss');
-
-    const avgWin = winTrades.length > 0 ? winTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0) / winTrades.length : 0;
-    const avgLoss = lossTrades.length > 0 ? Math.abs(lossTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0) / lossTrades.length) : 0;
-
-    const totalPnL = filteredTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0);
-    const pnlPercentage = activeAccount ? (totalPnL / activeAccount.starting_balance) * 100 : 0;
-
-    // Calculate profit factor
-    const grossWins = winTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0);
-    const grossLosses = Math.abs(lossTrades.reduce((sum, t) => sum + (t.pnl_dollar || 0), 0));
-    const profitFactor = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? Infinity : 0;
-
-    // Calculate best day
-    const tradesByDate: Record<string, number> = {};
-    filteredTrades.forEach(trade => {
-      const date = new Date(trade.date).toDateString();
-      if (!tradesByDate[date]) tradesByDate[date] = 0;
-      tradesByDate[date] += trade.pnl_dollar || 0;
-    });
-    const bestDay = Math.max(...Object.values(tradesByDate));
-
-    // Calculate current streak
-    let currentStreak = 0;
-    let lastResult = '';
-    for (let i = 0; i < filteredTrades.length; i++) {
-      const trade = filteredTrades[i];
-      if (i === 0) {
-        currentStreak = 1;
-        lastResult = trade.result;
-      } else {
-        if (trade.result === lastResult) {
-          currentStreak++;
-        } else {
-          break;
-        }
-      }
-    }
-
-    return {
-      totalTrades: filteredTrades.length,
-      wins,
-      losses,
-      breakevens,
-      winRate,
-      avgWin,
-      avgLoss,
-      totalPnL,
-      pnlPercentage,
-      profitFactor,
-      bestDay,
-      currentStreak
-    };
-  }, [filteredTrades, activeAccount]);
+    return calculateStats;
+  }, [calculateStats]);
 
   const formattedTrades: FormattedTrade[] = filteredTrades.map(trade => ({
     id: trade.id,
@@ -308,7 +235,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.5
       }}>
-          <StatsCard title="AVG WIN" value={`$${stats.avgWin.toFixed(2)}`} positive={true} icon={<DollarSign className="w-5 h-5" />} />
+          <StatsCard title="AVG WIN" value={`$${stats.avgWinRR.toFixed(2)}`} positive={true} icon={<DollarSign className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -320,7 +247,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.6
       }}>
-          <StatsCard title="AVG LOSS" value={`$${stats.avgLoss.toFixed(2)}`} positive={false} icon={<DollarSign className="w-5 h-5" />} />
+          <StatsCard title="AVG LOSS" value={`$${stats.avgLossRR.toFixed(2)}`} positive={false} icon={<DollarSign className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -332,7 +259,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.7
       }}>
-          <StatsCard title="PNL $" value={`${stats.totalPnL > 0 ? '+' : ''}$${stats.totalPnL.toFixed(2)}`} positive={stats.totalPnL >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL $" value={`${stats.totalRR > 0 ? '+' : ''}$${(stats.totalRR * (activeAccount?.current_balance || 0) * 0.01).toFixed(2)}`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -344,7 +271,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.8
       }}>
-          <StatsCard title="PNL %" value={`${stats.pnlPercentage > 0 ? '+' : ''}${stats.pnlPercentage.toFixed(2)}%`} positive={stats.pnlPercentage >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL %" value={`${stats.totalRR > 0 ? '+' : ''}${stats.totalRR.toFixed(2)}%`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -368,7 +295,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 1.0
       }}>
-          <StatsCard title="BEST DAY" value={`${stats.bestDay > 0 ? '+' : ''}$${stats.bestDay.toFixed(2)}`} positive={stats.bestDay >= 0} icon={<TrendingUp className="w-5 h-5" />} />
+          <StatsCard title="BEST DAY" value="N/A" positive={true} icon={<TrendingUp className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -380,7 +307,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 1.1
       }}>
-          <StatsCard title="STREAK" value={stats.currentStreak.toString()} positive={stats.currentStreak > 0} icon={<Target className="w-5 h-5" />} />
+          <StatsCard title="STREAK" value={stats.currentWinStreak.toString()} positive={stats.currentWinStreak > 0} icon={<Target className="w-5 h-5" />} />
         </motion.div>
       </div>
 
