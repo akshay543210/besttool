@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/table"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
-import { Edit, Trash2, Share, Image } from 'lucide-react'
+import { Edit, Trash2, Share, Image, Eye } from 'lucide-react'
 import { useTradeActions } from '@/hooks/useTradeActions'
 import { EditTradeModal } from './EditTradeModal'
 import type { Trade } from '@/hooks/useTrades'
+import { useNavigate } from 'react-router-dom'
 
 interface TradingTableProps {
   trades: Trade[]
@@ -26,6 +27,7 @@ interface TradingTableProps {
 export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
   const { deleteTrade, shareTrade, viewImage, loading } = useTradeActions();
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
+  const navigate = useNavigate();
 
   const handleEdit = (trade: Trade) => {
     setEditingTrade(trade);
@@ -43,6 +45,11 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
   const handleViewImage = (imageUrl: string) => {
     viewImage(imageUrl);
   };
+
+  const handleViewDetails = (tradeId: string) => {
+    navigate(`/review/${tradeId}`);
+  };
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -137,6 +144,17 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 hover:bg-primary/10"
+                          onClick={() => handleViewDetails(trade.id)}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </motion.div>
+                      
                       <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                         <Button 
                           variant="ghost" 
