@@ -239,7 +239,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.5
       }}>
-          <StatsCard title="AVG WIN" value={`$${stats.avgWinRR.toFixed(2)}`} positive={true} icon={<DollarSign className="w-5 h-5" />} />
+          <StatsCard title="AVG WIN" value={`${stats.avgWinRR.toFixed(1)}R`} positive={true} icon={<DollarSign className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -251,7 +251,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.6
       }}>
-          <StatsCard title="AVG LOSS" value={`$${stats.avgLossRR.toFixed(2)}`} positive={false} icon={<DollarSign className="w-5 h-5" />} />
+          <StatsCard title="AVG LOSS" value={`${stats.avgLossRR.toFixed(1)}R`} positive={false} icon={<DollarSign className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -263,7 +263,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.7
       }}>
-          <StatsCard title="PNL $" value={`${stats.totalRR > 0 ? '+' : ''}$${stats.totalRR.toFixed(2)}`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL $" value={`${stats.totalRR > 0 ? '+' : ''}$${Math.abs(stats.totalRR).toFixed(2)}`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -275,7 +275,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.8
       }}>
-          <StatsCard title="PNL %" value={`${stats.totalRR > 0 ? '+' : ''}${(stats.totalRR / (activeAccount?.current_balance || 1) * 100).toFixed(2)}%`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL %" value={`${stats.totalRR > 0 ? '+' : ''}${activeAccount ? (stats.totalRR / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
