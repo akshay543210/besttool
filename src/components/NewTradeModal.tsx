@@ -210,7 +210,8 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     if (!activeAccount) return 0;
     const riskPercentage = parseFloat(formData.risk_percentage);
     if (isNaN(riskPercentage)) return 0;
-    return (activeAccount.current_balance * (riskPercentage / 100));
+    // Using toFixed(2) to ensure we get exactly 2 decimal places
+    return parseFloat((activeAccount.current_balance * (riskPercentage / 100)).toFixed(2));
   };
 
   return (
