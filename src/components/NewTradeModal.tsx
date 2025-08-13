@@ -205,14 +205,15 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     setLoading(false);
   };
 
-  // Calculate risk amount based on current account balance and risk percentage
+  // Calculate risk amount based on account starting balance and risk percentage
   const calculateRiskAmount = () => {
     if (!activeAccount) return 0;
     const riskPercentage = parseFloat(formData.risk_percentage);
     if (isNaN(riskPercentage)) return 0;
     
-    // Calculate risk amount using precise math to avoid floating point errors
-    const riskAmount = (activeAccount.current_balance * riskPercentage) / 100;
+    // Using starting_balance instead of current_balance for consistent risk calculation
+    // This ensures risk is always calculated based on the initial account size
+    const riskAmount = (activeAccount.starting_balance * riskPercentage) / 100;
     return Math.round(riskAmount * 100) / 100; // Round to 2 decimal places
   };
 
