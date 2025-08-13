@@ -52,23 +52,28 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!user) return null;
     
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('screenshots')
-      .upload(fileName, file);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('screenshots')
+        .upload(fileName, file);
 
-    if (uploadError) {
-      console.error('Error uploading image:', uploadError);
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError);
+        return null;
+      }
+
+      const { data } = supabase.storage
+        .from('screenshots')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error in uploadImage:', error);
       return null;
     }
-
-    const { data } = supabase.storage
-      .from('screenshots')
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
   };
 
   const resetForm = () => {
@@ -90,7 +95,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     e.preventDefault();
     if (!user) {
       toast({
-        title: "Error",
+        title: "Authentication Error",
         description: "You must be logged in to add trades",
         variant: "destructive",
       });
@@ -99,7 +104,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
 
     if (!activeAccount) {
       toast({
-        title: "Error", 
+        title: "Account Error", 
         description: "No active trading account found. Please create an account in Settings.",
         variant: "destructive",
       });
@@ -109,8 +114,8 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     // Validate required fields
     if (!formData.symbol || !formData.side || !formData.result) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        title: "Validation Error",
+        description: "Please fill in all required fields (Symbol, Side, and Result)",
         variant: "destructive",
       });
       return;
@@ -120,7 +125,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     const riskPercentage = parseFloat(formData.risk_percentage);
     if (isNaN(riskPercentage) || riskPercentage <= 0 || riskPercentage > 100) {
       toast({
-        title: "Error",
+        title: "Validation Error",
         description: "Risk percentage must be between 0.1 and 100",
         variant: "destructive",
       });
@@ -132,7 +137,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       const rr = parseFloat(formData.rr);
       if (isNaN(rr) || rr <= 0) {
         toast({
-          title: "Error",
+          title: "Validation Error",
           description: "R:R ratio must be a positive number",
           variant: "destructive",
         });
@@ -149,12 +154,11 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         imageUrl = await uploadImage(imageFile);
         if (!imageUrl) {
           toast({
-            title: "Error",
-            description: "Failed to upload image",
+            title: "Upload Error",
+            description: "Failed to upload image. Trade will be saved without image.",
             variant: "destructive",
           });
-          setLoading(false);
-          return;
+          // Continue without image instead of failing completely
         }
       }
 
@@ -177,26 +181,23 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         });
 
       if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Trade logged successfully",
-        });
-        
-        resetForm();
-        setOpen(false);
-        // Ensure account balance is recalculated after adding new trade
-        onTradeAdded?.();
+        throw new Error(error.message);
       }
-    } catch (error) {
+
+      toast({
+        title: "Success",
+        description: "Trade logged successfully",
+      });
+      
+      resetForm();
+      setOpen(false);
+      // Ensure account balance is recalculated after adding new trade
+      onTradeAdded?.();
+    } catch (error: any) {
+      console.error('Error saving trade:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: error.message || "An unexpected error occurred while saving the trade",
         variant: "destructive",
       });
     }
@@ -205,7 +206,12 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        resetForm();
+      }
+    }}>
       <DialogTrigger asChild>
         <motion.div
           whileHover={{ scale: 1.05 }}
