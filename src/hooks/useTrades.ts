@@ -91,23 +91,25 @@ export function useTrades() {
     if (!activeAccount || trades.length === 0) return;
 
     try {
-      // Calculate total P&L from all trades for this account using 1% of starting balance
-      const riskAmount = activeAccount.starting_balance * 0.01; // 1% of starting balance
+      // Calculate total P&L from all trades for this account
+      let totalPnL = 0;
       
-      const totalPnL = trades.reduce((sum, trade) => {
+      trades.forEach(trade => {
         // Use actual pnl_dollar if available
         if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
-          return sum + trade.pnl_dollar;
+          totalPnL += trade.pnl_dollar;
+        } else if (trade.result && trade.risk_percentage) {
+          // Calculate P&L based on risk percentage and R:R ratio using starting balance
+          const riskAmount = activeAccount.starting_balance * (trade.risk_percentage / 100);
+          
+          if (trade.result.toLowerCase() === 'win') {
+            totalPnL += (riskAmount * (trade.rr || 0));
+          } else if (trade.result.toLowerCase() === 'loss') {
+            totalPnL -= riskAmount;
+          }
+          // Breakeven contributes 0 to P&L
         }
-        
-        // Calculate P&L based on R:R ratio and 1% risk
-        if (trade.result.toLowerCase() === 'win') {
-          return sum + (riskAmount * (trade.rr || 0));
-        } else if (trade.result.toLowerCase() === 'loss') {
-          return sum - riskAmount;
-        }
-        return sum; // breakeven
-      }, 0);
+      });
 
       // Update account balance
       const newBalance = activeAccount.starting_balance + totalPnL;
@@ -174,15 +176,18 @@ export function useTrades() {
       return trade.pnl_dollar;
     }
     
-    // Calculate risk amount using 1% of starting balance
-    const riskAmount = account.starting_balance * 0.01;
-    
-    if (trade.result.toLowerCase() === 'win') {
-      return riskAmount * (trade.rr || 0);
-    } else if (trade.result.toLowerCase() === 'loss') {
-      return -riskAmount;
+    // Calculate risk amount using starting balance and trade's risk percentage
+    if (trade.result && trade.risk_percentage) {
+      const riskAmount = account.starting_balance * (trade.risk_percentage / 100);
+      
+      if (trade.result.toLowerCase() === 'win') {
+        return riskAmount * (trade.rr || 0);
+      } else if (trade.result.toLowerCase() === 'loss') {
+        return -riskAmount;
+      }
     }
-    return 0; // breakeven
+    
+    return 0; // breakeven or missing data
   }, []);
 
   const calculateStats = useMemo((): TradeStats => {
