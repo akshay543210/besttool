@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, CalendarIcon, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarIcon, Tag, TrendingUp } from "lucide-react";
 import { format } from 'date-fns';
 import {
   Table,
@@ -19,9 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTradeIdeas } from '@/hooks/useTradeIdeas';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TradeIdeasPage() {
-  const { tradeIdeas, loading, refetchTradeIdeas } = useTradeIdeas();
+  const { tradeIdeas, loading, refetchTradeIdeas, createTradeIdea, updateTradeIdea, deleteTradeIdea } = useTradeIdeas();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -64,26 +66,65 @@ export default function TradeIdeasPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingIdeaId) {
-      await updateTradeIdea(editingIdeaId, {
-        title: formData.title,
-        description: formData.description,
-        session: formData.session,
-        strategy_tag: formData.strategy_tag || null,
+    if (!formData.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Title is required",
+        variant: "destructive",
       });
-    } else {
-      await createTradeIdea({
-        title: formData.title,
-        description: formData.description,
-        session: formData.session,
-        strategy_tag: formData.strategy_tag || null,
+      return;
+    }
+    
+    try {
+      if (editingIdeaId) {
+        await updateTradeIdea(editingIdeaId, {
+          title: formData.title,
+          description: formData.description || null,
+          session: formData.session,
+          strategy_tag: formData.strategy_tag || null,
+        });
+        toast({
+          title: "Success",
+          description: "Trade idea updated successfully",
+        });
+      } else {
+        await createTradeIdea({
+          title: formData.title,
+          description: formData.description || null,
+          session: formData.session,
+          strategy_tag: formData.strategy_tag || null,
+        });
+        toast({
+          title: "Success",
+          description: "Trade idea created successfully",
+        });
+      }
+      
+      handleCloseDialog();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save trade idea",
+        variant: "destructive",
       });
     }
-
-    handleCloseDialog();
   };
 
-  const { createTradeIdea, updateTradeIdea, deleteTradeIdea } = useTradeIdeas();
+  const handleDeleteIdea = async (id: string) => {
+    try {
+      await deleteTradeIdea(id);
+      toast({
+        title: "Success",
+        description: "Trade idea deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete trade idea",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -105,7 +146,7 @@ export default function TradeIdeasPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">Title *</Label>
                 <Input
                   id="title"
                   value={formData.title}
@@ -123,7 +164,6 @@ export default function TradeIdeasPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe your trade idea..."
                   rows={3}
-                  required
                 />
               </div>
 
@@ -133,7 +173,6 @@ export default function TradeIdeasPage() {
                   <Select
                     value={formData.session}
                     onValueChange={(value) => setFormData({ ...formData, session: value })}
-                    required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select session" />
@@ -196,7 +235,7 @@ export default function TradeIdeasPage() {
       ) : (
         <Card className="bg-gradient-card shadow-card border-border">
           <CardHeader>
-            <CardTitle className="text-card-foreground">Your Trade Ideas</CardTitle>
+            <CardTitle className="text-card-foreground">Your Trade Ideas ({tradeIdeas.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -216,9 +255,13 @@ export default function TradeIdeasPage() {
                       {idea.title}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="border-border text-muted-foreground">
-                        {idea.session}
-                      </Badge>
+                      {idea.session ? (
+                        <Badge variant="outline" className="border-border text-muted-foreground">
+                          {idea.session}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {idea.strategy_tag ? (
@@ -262,7 +305,7 @@ export default function TradeIdeasPage() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => deleteTradeIdea(idea.id)}
+                                onClick={() => handleDeleteIdea(idea.id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Delete

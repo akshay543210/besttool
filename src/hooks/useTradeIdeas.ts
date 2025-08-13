@@ -54,7 +54,14 @@ export function useTradeIdeas() {
   }, [user?.id, toast]);
 
   const createTradeIdea = async (idea: Omit<TradeIdea, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    if (!user) return null;
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create trade ideas",
+        variant: "destructive",
+      });
+      return null;
+    }
 
     try {
       const { data, error } = await supabase
@@ -88,6 +95,15 @@ export function useTradeIdeas() {
   };
 
   const updateTradeIdea = async (id: string, updates: Partial<TradeIdea>) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update trade ideas",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('trade_ideas')
@@ -95,7 +111,8 @@ export function useTradeIdeas() {
           ...updates,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
@@ -116,11 +133,21 @@ export function useTradeIdeas() {
   };
 
   const deleteTradeIdea = async (id: string) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to delete trade ideas",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('trade_ideas')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
