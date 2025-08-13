@@ -18,6 +18,7 @@ import { useTradeActions } from '@/hooks/useTradeActions'
 import { EditTradeModal } from './EditTradeModal'
 import type { Trade } from '@/hooks/useTrades'
 import { useNavigate } from 'react-router-dom'
+import { useAccounts } from '@/hooks/useAccounts'
 
 interface TradingTableProps {
   trades: Trade[]
@@ -28,6 +29,31 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
   const { deleteTrade, shareTrade, viewImage, loading } = useTradeActions();
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const navigate = useNavigate();
+  const { getActiveAccount } = useAccounts();
+  const activeAccount = getActiveAccount();
+
+  // Calculate P&L for a single trade based on risk percentage and R:R ratio
+  const calculateTradePnL = (trade: Trade) => {
+    if (!activeAccount) return 0;
+    
+    // If trade has actual pnl_dollar value, use that
+    if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
+      return Number(trade.pnl_dollar);
+    }
+    
+    // Calculate based on risk percentage and R:R ratio
+    const riskPercentage = trade.risk_percentage || 1.0; // Default to 1% if not set
+    const riskAmount = activeAccount.current_balance * (riskPercentage / 100);
+    
+    switch (trade.result.toLowerCase()) {
+      case 'win':
+        return riskAmount * (trade.rr || 1); // Win: risk * reward
+      case 'loss':
+        return -riskAmount; // Loss: -risk
+      default:
+        return 0; // Breakeven
+    }
+  };
 
   const handleEdit = (trade: Trade) => {
     setEditingTrade(trade);
@@ -73,159 +99,162 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trades.map((trade, index) => (
-                <motion.tr
-                  key={trade.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.3 }}
-                  className="border-border hover:bg-muted/50 group"
-                >
-                  <TableCell className="text-foreground">{new Date(trade.date).toLocaleDateString()}</TableCell>
-                  <TableCell className="font-mono text-foreground font-medium">{trade.symbol || 'N/A'}</TableCell>
-                  <TableCell>
-                    {trade.side ? (
+              {trades.map((trade, index) => {
+                const tradePnL = calculateTradePnL(trade);
+                return (
+                  <motion.tr
+                    key={trade.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.3 }}
+                    className="border-border hover:bg-muted/50 group"
+                  >
+                    <TableCell className="text-foreground">{new Date(trade.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-mono text-foreground font-medium">{trade.symbol || 'N/A'}</TableCell>
+                    <TableCell>
+                      {trade.side ? (
+                        <Badge 
+                          variant={trade.side === "LONG" ? "default" : "secondary"}
+                          className={`${
+                            trade.side === "LONG" 
+                              ? "bg-success text-success-foreground" 
+                              : "bg-destructive text-destructive-foreground"
+                          } transition-colors`}
+                        >
+                          {trade.side}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {trade.setup_tag ? (
+                        <Badge variant="outline" className="border-border text-muted-foreground">
+                          {trade.setup_tag}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {trade.risk_percentage ? `${trade.risk_percentage}%` : '1.0%'}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {trade.rr ? `1:${trade.rr}` : 'N/A'}
+                    </TableCell>
+                    <TableCell>
                       <Badge 
-                        variant={trade.side === "LONG" ? "default" : "secondary"}
+                        variant={
+                          trade.result === "Win" ? "default" : 
+                          trade.result === "Loss" ? "destructive" : "secondary"
+                        }
                         className={`${
-                          trade.side === "LONG" 
+                          trade.result === "Win" 
                             ? "bg-success text-success-foreground" 
-                            : "bg-destructive text-destructive-foreground"
+                            : trade.result === "Loss"
+                            ? "bg-destructive text-destructive-foreground"
+                            : "bg-muted text-muted-foreground"
                         } transition-colors`}
                       >
-                        {trade.side}
+                        {trade.result}
                       </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">N/A</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {trade.setup_tag ? (
-                      <Badge variant="outline" className="border-border text-muted-foreground">
-                        {trade.setup_tag}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">N/A</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-foreground">
-                    {trade.risk_percentage ? `${trade.risk_percentage}%` : 'N/A'}
-                  </TableCell>
-                  <TableCell className="text-foreground">
-                    {trade.rr ? `1:${trade.rr}` : 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        trade.result === "Win" ? "default" : 
-                        trade.result === "Loss" ? "destructive" : "secondary"
-                      }
-                      className={`${
-                        trade.result === "Win" 
-                          ? "bg-success text-success-foreground" 
-                          : trade.result === "Loss"
-                          ? "bg-destructive text-destructive-foreground"
-                          : "bg-muted text-muted-foreground"
-                      } transition-colors`}
-                    >
-                      {trade.result}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className={cn(
-                    "font-semibold font-mono",
-                    Number(trade.pnl_dollar || 0) >= 0 ? "text-success" : "text-destructive"
-                  )}>
-                    {trade.pnl_dollar !== null && trade.pnl_dollar !== undefined ? (
-                      <>
-                        {Number(trade.pnl_dollar) > 0 ? '+' : ''}${Number(trade.pnl_dollar).toFixed(2)}
-                      </>
-                    ) : (
-                      'N/A'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-primary/10"
-                          onClick={() => handleViewDetails(trade.id)}
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </motion.div>
-                      
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-primary/10"
-                          onClick={() => handleEdit(trade)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                      </motion.div>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 hover:bg-destructive/10"
-                              disabled={loading}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </motion.div>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Trade</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this trade? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleDelete(trade.id)}
-                              className="bg-destructive hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-blue-500/10"
-                          onClick={() => handleShare(trade)}
-                        >
-                          <Share className="h-3 w-3" />
-                        </Button>
-                      </motion.div>
-                      
-                      {trade.image_url && (
+                    </TableCell>
+                    <TableCell className={cn(
+                      "font-semibold font-mono",
+                      tradePnL >= 0 ? "text-success" : "text-destructive"
+                    )}>
+                      {tradePnL !== 0 ? (
+                        <>
+                          {tradePnL > 0 ? '+' : ''}${Math.abs(tradePnL).toFixed(2)}
+                        </>
+                      ) : (
+                        '$0.00'
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-8 w-8 p-0 hover:bg-orange-500/10"
-                            onClick={() => handleViewImage(trade.image_url!)}
+                            className="h-8 w-8 p-0 hover:bg-primary/10"
+                            onClick={() => handleViewDetails(trade.id)}
                           >
-                            <Image className="h-3 w-3" />
+                            <Eye className="h-3 w-3" />
                           </Button>
                         </motion.div>
-                      )}
-                    </div>
-                  </TableCell>
-                </motion.tr>
-              ))}
+                        
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 hover:bg-primary/10"
+                            onClick={() => handleEdit(trade)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        </motion.div>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-destructive/10"
+                                disabled={loading}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </motion.div>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Trade</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this trade? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDelete(trade.id)}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 hover:bg-blue-500/10"
+                            onClick={() => handleShare(trade)}
+                          >
+                            <Share className="h-3 w-3" />
+                          </Button>
+                        </motion.div>
+                        
+                        {trade.image_url && (
+                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 hover:bg-orange-500/10"
+                              onClick={() => handleViewImage(trade.image_url!)}
+                            >
+                              <Image className="h-3 w-3" />
+                            </Button>
+                          </motion.div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </motion.tr>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
