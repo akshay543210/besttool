@@ -8,6 +8,7 @@ import { useTrades } from '@/hooks/useTrades';
 import { useAccounts } from '@/hooks/useAccounts';
 import { TrendingUp, TrendingDown, Target, DollarSign, BarChart3, User, Twitter, MessageCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, subYears, isSameDay, isSameWeek, isSameMonth, isSameYear } from 'date-fns';
 
 interface FormattedTrade {
   id: string;
@@ -42,54 +43,144 @@ export function TradingDashboard() {
 
   const filteredTrades = useMemo(() => {
     if (!trades) return [];
+    
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const thisWeekStart = new Date(today);
-    thisWeekStart.setDate(today.getDate() - today.getDay());
-    const lastWeekStart = new Date(thisWeekStart);
-    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
-    const lastWeekEnd = new Date(thisWeekStart);
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-    const thisYearStart = new Date(now.getFullYear(), 0, 1);
-    const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-    const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31);
+    const yesterday = subDays(today, 1);
+    const startOfThisWeek = startOfWeek(today, { weekStartsOn: 0 });
+    const endOfThisWeek = endOfWeek(today, { weekStartsOn: 0 });
+    const startOfLastWeek = subWeeks(startOfThisWeek, 1);
+    const endOfLastWeek = subDays(startOfThisWeek, 1);
+    const startOfThisMonth = startOfMonth(today);
+    const endOfThisMonth = endOfMonth(today);
+    const startOfLastMonth = subMonths(startOfThisMonth, 1);
+    const endOfLastMonth = subDays(startOfThisMonth, 1);
+    const threeMonthsAgo = subMonths(today, 3);
+    const startOfThisYear = new Date(today.getFullYear(), 0, 1);
+    const endOfThisYear = new Date(today.getFullYear(), 11, 31);
+    const startOfLastYear = new Date(today.getFullYear() - 1, 0, 1);
+    const endOfLastYear = new Date(today.getFullYear() - 1, 11, 31);
 
     return trades.filter(trade => {
       const tradeDate = new Date(trade.date);
+      
       switch (activeFilter) {
         case 'today':
-          return tradeDate >= today;
+          return isSameDay(tradeDate, today);
         case 'yesterday':
-          return tradeDate >= yesterday && tradeDate < today;
+          return isSameDay(tradeDate, yesterday);
         case 'this-week':
-          return tradeDate >= thisWeekStart;
+          return isSameWeek(tradeDate, today, { weekStartsOn: 0 });
         case 'last-week':
-          return tradeDate >= lastWeekStart && tradeDate < thisWeekStart;
+          return isSameWeek(tradeDate, subWeeks(today, 1), { weekStartsOn: 0 });
         case 'this-month':
-          return tradeDate >= thisMonthStart;
+          return isSameMonth(tradeDate, today);
         case 'last-month':
-          return tradeDate >= lastMonthStart && tradeDate <= lastMonthEnd;
+          return isSameMonth(tradeDate, subMonths(today, 1));
         case '3-months':
           return tradeDate >= threeMonthsAgo;
         case 'this-year':
-          return tradeDate >= thisYearStart;
+          return isSameYear(tradeDate, today);
         case 'last-year':
-          return tradeDate >= lastYearStart && tradeDate <= lastYearEnd;
+          return isSameYear(tradeDate, subYears(today, 1));
         default:
           return true;
       }
     });
   }, [trades, activeFilter]);
 
-  // Use the calculateStats function from useTrades hook for accurate stats
-  const stats = useMemo(() => {
-    return calculateStats;
-  }, [calculateStats]);
+  // Calculate stats based on filtered trades
+  const filteredStats = useMemo(() => {
+    if (filteredTrades.length === 0) {
+      return {
+        totalTrades: 0,
+        wins: 0,
+        losses: 0,
+        breakevens: 0,
+        winRate: 0,
+        avgWinRR: 0,
+        avgLossRR: 0,
+        profitFactor: 0,
+        currentWinStreak: 0,
+        currentLossStreak: 0,
+        topWinRR: 0,
+        topLossRR: 0,
+        totalRR: 0,
+      };
+    }
+
+    const wins = filteredTrades.filter(t => t.result.toLowerCase() === 'win');
+    const losses = filteredTrades.filter(t => t.result.toLowerCase() === 'loss');
+    const breakevens = filteredTrades.filter(t => t.result.toLowerCase() === 'breakeven');
+
+    // Calculate P&L using actual pnl_dollar values when available
+    const totalWinPnL = wins.reduce((sum, trade) => sum + (trade.pnl_dollar || 0), 0);
+    const totalLossPnL = losses.reduce((sum, trade) => sum + Math.abs(trade.pnl_dollar || 0), 0);
+    
+    // For R:R based calculations when pnl_dollar is not available
+    const riskAmount = activeAccount ? activeAccount.starting_balance * 0.01 : 0;
+    const winRRs = wins
+      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
+      .map(t => t.rr || 0)
+      .filter(rr => rr > 0);
+      
+    const lossRRs = losses
+      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
+      .map(t => 1) // Loss is always 1R
+      .filter(r => r > 0);
+
+    const avgWinRR = winRRs.length > 0 ? winRRs.reduce((a, b) => a + b, 0) / winRRs.length : 0;
+    const avgLossRR = lossRRs.length > 0 ? lossRRs.reduce((a, b) => a + b, 0) / lossRRs.length : 0;
+    
+    const totalWinRR = winRRs.reduce((a, b) => a + b, 0);
+    const totalLossRR = lossRRs.reduce((a, b) => a + b, 0);
+    
+    // Calculate profit factor using actual P&L when available, fallback to R:R
+    const profitFactor = totalLossPnL > 0 ? totalWinPnL / totalLossPnL : 
+                        totalLossRR > 0 ? (totalWinRR * riskAmount) / (totalLossRR * riskAmount) : 
+                        totalWinPnL > 0 ? Infinity : 0;
+
+    // Calculate streaks
+    let currentWinStreak = 0;
+    let currentLossStreak = 0;
+    
+    // Calculate from most recent trade backwards
+    for (let i = 0; i < filteredTrades.length; i++) {
+      const result = filteredTrades[i].result.toLowerCase();
+      if (result === 'win') {
+        currentWinStreak++;
+        currentLossStreak = 0;
+      } else if (result === 'loss') {
+        currentLossStreak++;
+        currentWinStreak = 0;
+      } else {
+        currentWinStreak = 0;
+        currentLossStreak = 0;
+      }
+    }
+
+    const topWinRR = winRRs.length > 0 ? Math.max(...winRRs) : 0;
+    const topLossRR = 1; // Loss is always 1R
+    
+    // Calculate total RR using actual P&L when available
+    const totalRR = totalWinPnL - totalLossPnL;
+
+    return {
+      totalTrades: filteredTrades.length,
+      wins: wins.length,
+      losses: losses.length,
+      breakevens: breakevens.length,
+      winRate: filteredTrades.length > 0 ? (wins.length / filteredTrades.length) * 100 : 0,
+      avgWinRR,
+      avgLossRR,
+      profitFactor,
+      currentWinStreak,
+      currentLossStreak,
+      topWinRR,
+      topLossRR,
+      totalRR,
+    };
+  }, [filteredTrades, activeAccount?.starting_balance]);
 
   const formattedTrades: FormattedTrade[] = filteredTrades.map(trade => ({
     id: trade.id,
@@ -191,7 +282,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.1
       }}>
-          <StatsCard title="WINS" value={stats.wins.toString()} change={`${stats.winRate.toFixed(1)}%`} positive={true} icon={<TrendingUp className="w-5 h-5" />} />
+          <StatsCard title="WINS" value={filteredStats.wins.toString()} change={`${filteredStats.winRate.toFixed(1)}%`} positive={true} icon={<TrendingUp className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -203,7 +294,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.2
       }}>
-          <StatsCard title="LOSSES" value={stats.losses.toString()} change={`${(100 - stats.winRate).toFixed(1)}%`} positive={false} icon={<TrendingDown className="w-5 h-5" />} />
+          <StatsCard title="LOSSES" value={filteredStats.losses.toString()} change={`${(100 - filteredStats.winRate).toFixed(1)}%`} positive={false} icon={<TrendingDown className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -227,7 +318,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.4
       }}>
-          <StatsCard title="WASH" value={stats.breakevens.toString()} change={`${stats.totalTrades > 0 ? (stats.breakevens / stats.totalTrades * 100).toFixed(1) : 0}%`} icon={<Target className="w-5 h-5" />} />
+          <StatsCard title="WASH" value={filteredStats.breakevens.toString()} change={`${filteredStats.totalTrades > 0 ? (filteredStats.breakevens / filteredStats.totalTrades * 100).toFixed(1) : 0}%`} icon={<Target className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -239,7 +330,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.5
       }}>
-          <StatsCard title="AVG WIN" value={`${stats.avgWinRR.toFixed(1)}R`} positive={true} icon={<DollarSign className="w-5 h-5" />} />
+          <StatsCard title="AVG WIN" value={`${filteredStats.avgWinRR.toFixed(1)}R`} positive={true} icon={<DollarSign className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -251,7 +342,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.6
       }}>
-          <StatsCard title="AVG LOSS" value={`${stats.avgLossRR.toFixed(1)}R`} positive={false} icon={<DollarSign className="w-5 h-5" />} />
+          <StatsCard title="AVG LOSS" value={`${filteredStats.avgLossRR.toFixed(1)}R`} positive={false} icon={<DollarSign className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -263,7 +354,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.7
       }}>
-          <StatsCard title="PNL $" value={`${stats.totalRR > 0 ? '+' : ''}$${Math.abs(stats.totalRR).toFixed(2)}`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL $" value={`${filteredStats.totalRR > 0 ? '+' : ''}$${Math.abs(filteredStats.totalRR).toFixed(2)}`} positive={filteredStats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -275,7 +366,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.8
       }}>
-          <StatsCard title="PNL %" value={`${stats.totalRR > 0 ? '+' : ''}${activeAccount ? (stats.totalRR / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} positive={stats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL %" value={`${filteredStats.totalRR > 0 ? '+' : ''}${activeAccount ? (filteredStats.totalRR / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} positive={filteredStats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -287,7 +378,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.9
       }}>
-          <StatsCard title="PROFIT FACTOR" value={stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)} positive={stats.profitFactor > 1} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PROFIT FACTOR" value={filteredStats.profitFactor === Infinity ? "∞" : filteredStats.profitFactor.toFixed(2)} positive={filteredStats.profitFactor > 1} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -311,7 +402,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 1.1
       }}>
-          <StatsCard title="STREAK" value={stats.currentWinStreak.toString()} positive={stats.currentWinStreak > 0} icon={<Target className="w-5 h-5" />} />
+          <StatsCard title="STREAK" value={filteredStats.currentWinStreak.toString()} positive={filteredStats.currentWinStreak > 0} icon={<Target className="w-5 h-5" />} />
         </motion.div>
       </div>
 
@@ -334,7 +425,7 @@ export function TradingDashboard() {
       </motion.div>
 
       {/* Demo Notice */}
-      {stats.totalTrades === 0 && <motion.div initial={{
+      {filteredStats.totalTrades === 0 && <motion.div initial={{
       opacity: 0
     }} animate={{
       opacity: 1
