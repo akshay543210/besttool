@@ -131,7 +131,8 @@ export function TradingDashboard() {
     }, 0);
     
     // For R:R based calculations when pnl_dollar is not available
-    const riskAmount = activeAccount ? activeAccount.starting_balance * (activeAccount.risk_per_trade / 100) : 0;
+    // Using fixed 1% risk per trade for all account types
+    const riskAmount = activeAccount ? activeAccount.current_balance * 0.01 : 0;
     
     // Calculate total P&L combining actual P&L and R:R based calculations
     let totalPnL = 0;
@@ -139,7 +140,7 @@ export function TradingDashboard() {
       if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
         totalPnL += trade.pnl_dollar;
       } else {
-        // Fallback to R:R calculation
+        // Fallback to R:R calculation with fixed 1% risk
         if (trade.result.toLowerCase() === 'win') {
           totalPnL += (trade.rr || 0) * riskAmount;
         } else if (trade.result.toLowerCase() === 'loss') {
@@ -201,7 +202,7 @@ export function TradingDashboard() {
       if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
         tradePnL = trade.pnl_dollar;
       } else {
-        // Fallback to R:R calculation
+        // Fallback to R:R calculation with fixed 1% risk
         if (trade.result.toLowerCase() === 'win') {
           tradePnL = (trade.rr || 0) * riskAmount;
         } else if (trade.result.toLowerCase() === 'loss') {
@@ -238,7 +239,7 @@ export function TradingDashboard() {
       totalPnL,
       bestDayProfit
     };
-  }, [filteredTrades, activeAccount?.starting_balance, activeAccount?.risk_per_trade]);
+  }, [filteredTrades, activeAccount?.current_balance]);
 
   const formattedTrades: FormattedTrade[] = filteredTrades.map(trade => ({
     id: trade.id,
