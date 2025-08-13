@@ -6,7 +6,6 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { Button } from "@/components/ui/button";
 import { NewTradeModal } from "./NewTradeModal";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { TradeIdeas } from "./TradeIdeas";
 import { useTrades } from "@/hooks/useTrades";
 
 const mainItems = [{
@@ -114,14 +113,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
             </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Trade Ideas */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Trade Ideas</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <TradeIdeas />
           </SidebarGroupContent>
         </SidebarGroup>
 
