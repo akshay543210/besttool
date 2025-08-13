@@ -205,6 +205,14 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     setLoading(false);
   };
 
+  // Calculate risk amount based on current account balance and risk percentage
+  const calculateRiskAmount = () => {
+    if (!activeAccount) return 0;
+    const riskPercentage = parseFloat(formData.risk_percentage);
+    if (isNaN(riskPercentage)) return 0;
+    return (activeAccount.current_balance * (riskPercentage / 100));
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       setOpen(isOpen);
@@ -318,7 +326,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
               />
               {activeAccount && formData.risk_percentage && (
                 <p className="text-xs text-muted-foreground">
-                  Risk Amount: ${(activeAccount.current_balance * (Number(formData.risk_percentage) / 100)).toFixed(2)}
+                  Risk Amount: ${calculateRiskAmount().toFixed(2)}
                 </p>
               )}
             </div>
