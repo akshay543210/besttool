@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTrades } from "@/hooks/useTrades";
 import { useAccounts } from "@/hooks/useAccounts";
-import { calculatePnL } from "@/lib/tradingUtils";
 import { format, startOfWeek, endOfWeek, addWeeks, isSameWeek, startOfMonth, endOfMonth } from "date-fns";
 
 const Calendar = () => {
@@ -23,33 +22,8 @@ const Calendar = () => {
   const today = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // Navigation items for sidebar
-  const navItems = [{
-    icon: BarChart3,
-    label: "Dashboard",
-    active: false
-  }, {
-    icon: Users,
-    label: "Groups",
-    active: false
-  }, {
-    icon: TrendingUp,
-    label: "Stats",
-    active: false
-  }, {
-    icon: CalendarIcon,
-    label: "Calendar",
-    active: true
-  }, {
-    icon: Settings,
-    label: "Settings",
-    active: false
-  }];
 
   // Get trades for a specific day
   const getTradesForDay = (day: number) => {
@@ -118,7 +92,7 @@ const Calendar = () => {
     return today.getDate() === day && today.getMonth() === currentMonth && today.getFullYear() === currentYear;
   };
 
-  // Calculate total monthly stats using the hook's calculateStats
+  // Calculate total monthly stats
   const monthlyStats = () => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -127,26 +101,22 @@ const Calendar = () => {
       return tradeDate >= monthStart && tradeDate <= monthEnd;
     });
     
-    // Calculate realized P&L (only wins)
-    const realizedPnL = activeAccount ? monthTrades.reduce((total, trade) => {
-      const pnl = calculatePnLHook(trade, activeAccount);
-      return total + (pnl > 0 ? pnl : 0); // Only count positive P&L
+    // Calculate total P&L for the month
+    const totalPnL = activeAccount ? monthTrades.reduce((total, trade) => {
+      return total + calculatePnLHook(trade, activeAccount);
     }, 0) : 0;
     
     return {
-      balance: (activeAccount?.current_balance || 50000),
-      mll: 0, // Max Loss Limit - not implemented yet
-      rpnl: realizedPnL, // Realized P&L (profits only)
-      upnl: 0 // Unrealized P&L - not implemented yet
+      balance: (activeAccount?.current_balance || 0),
+      mll: 0, // Max Loss Limit - placeholder
+      rpnl: totalPnL, // Total realized P&L
+      upnl: 0 // Unrealized P&L - placeholder
     };
   };
 
   const stats = monthlyStats();
 
   return <div className="min-h-screen bg-background flex">
-      {/* Left Sidebar - removed for brevity */}
-      
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Stats Bar */}
@@ -168,8 +138,8 @@ const Calendar = () => {
           </div>
           <div className="bg-muted/30 px-4 py-2 rounded-lg">
             <div className="text-xs text-muted-foreground uppercase tracking-wide">RP&L</div>
-            <div className="text-sm font-semibold text-foreground">
-              ${stats.rpnl.toFixed(2)}
+            <div className={cn("text-sm font-semibold", stats.rpnl >= 0 ? "text-success" : "text-destructive")}>
+              {stats.rpnl >= 0 ? '+' : ''}${Math.abs(stats.rpnl).toFixed(2)}
             </div>
           </div>
           <div className="bg-muted/30 px-4 py-2 rounded-lg">
@@ -230,7 +200,7 @@ const Calendar = () => {
                               <div className="text-xs text-muted-foreground">{day}</div>
                               <div className="flex-1 flex flex-col justify-center items-center">
                                 {dayPnL !== 0 && <div className={cn("text-sm font-bold", dayPnL > 0 ? "text-success" : "text-destructive")}>
-                                    {dayPnL > 0 ? '+' : ''}${dayPnL.toFixed(2)}
+                                    {dayPnL > 0 ? '+' : ''}${Math.abs(dayPnL).toFixed(2)}
                                   </div>}
                                 {dayTrades.length > 0 && <div className="text-xs text-muted-foreground">
                                     {dayTrades.length} trade{dayTrades.length > 1 ? 's' : ''}
@@ -246,7 +216,7 @@ const Calendar = () => {
                         Week {weekIndex + 1}
                       </div>
                       <div className={cn("text-sm font-bold", weekData.pnl > 0 ? "text-success" : weekData.pnl < 0 ? "text-destructive" : "text-muted-foreground")}>
-                        {weekData.pnl > 0 ? '+' : ''}${weekData.pnl.toFixed(2)}
+                        {weekData.pnl > 0 ? '+' : ''}${Math.abs(weekData.pnl).toFixed(2)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {weekData.trades} trade{weekData.trades !== 1 ? 's' : ''}
