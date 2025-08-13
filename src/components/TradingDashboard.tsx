@@ -33,7 +33,8 @@ export function TradingDashboard() {
     trades,
     loading,
     refetchTrades,
-    calculateStats
+    calculateStats,
+    calculatePnL
   } = useTrades();
   const {
     getActiveAccount
@@ -89,9 +90,9 @@ export function TradingDashboard() {
     });
   }, [trades, activeFilter]);
 
-  // Calculate stats based on filtered trades
+  // Calculate stats based on filtered trades using consistent P&L calculation
   const filteredStats = useMemo(() => {
-    if (filteredTrades.length === 0) {
+    if (filteredTrades.length === 0 || !activeAccount) {
       return {
         totalTrades: 0,
         wins: 0,
@@ -111,53 +112,28 @@ export function TradingDashboard() {
       };
     }
 
-    const wins = filteredTrades.filter(t => t.result.toLowerCase() === 'win');
-    const losses = filteredTrades.filter(t => t.result.toLowerCase() === 'loss');
-    const breakevens = filteredTrades.filter(t => t.result.toLowerCase() === 'breakeven');
+    // Calculate P&L for each trade using the consistent method
+    const tradesWithPnL = filteredTrades.map(trade => ({
+      ...trade,
+      calculatedPnL: calculatePnL(trade, activeAccount)
+    }));
 
-    // Calculate P&L using actual pnl_dollar values when available
-    const totalWinPnL = wins.reduce((sum, trade) => {
-      const pnl = trade.pnl_dollar !== null && trade.pnl_dollar !== undefined 
-        ? trade.pnl_dollar 
-        : 0;
-      return sum + pnl;
-    }, 0);
-    
-    const totalLossPnL = losses.reduce((sum, trade) => {
-      const pnl = trade.pnl_dollar !== null && trade.pnl_dollar !== undefined 
-        ? Math.abs(trade.pnl_dollar) 
-        : 0;
-      return sum + pnl;
-    }, 0);
-    
-    // For R:R based calculations when pnl_dollar is not available
-    // Using fixed 1% risk per trade for all account types
-    const riskAmount = activeAccount ? activeAccount.current_balance * 0.01 : 0;
-    
-    // Calculate total P&L combining actual P&L and R:R based calculations
-    let totalPnL = 0;
-    filteredTrades.forEach(trade => {
-      if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
-        totalPnL += trade.pnl_dollar;
-      } else {
-        // Fallback to R:R calculation with fixed 1% risk
-        if (trade.result.toLowerCase() === 'win') {
-          totalPnL += (trade.rr || 0) * riskAmount;
-        } else if (trade.result.toLowerCase() === 'loss') {
-          totalPnL -= riskAmount;
-        }
-        // Breakeven contributes 0 to P&L
-      }
-    });
-    
+    const wins = tradesWithPnL.filter(t => t.result.toLowerCase() === 'win');
+    const losses = tradesWithPnL.filter(t => t.result.toLowerCase() === 'loss');
+    const breakevens = tradesWithPnL.filter(t => t.result.toLowerCase() === 'breakeven');
+
+    // Calculate total P&L using consistent calculation
+    const totalWinPnL = wins.reduce((sum, trade) => sum + Math.abs(trade.calculatedPnL), 0);
+    const totalLossPnL = losses.reduce((sum, trade) => sum + Math.abs(trade.calculatedPnL), 0);
+    const totalPnL = tradesWithPnL.reduce((sum, trade) => sum + trade.calculatedPnL, 0);
+
+    // Calculate R:R values for win/loss trades
     const winRRs = wins
-      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
       .map(t => t.rr || 0)
       .filter(rr => rr > 0);
       
     const lossRRs = losses
-      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
-      .map(t => 1) // Loss is always 1R
+      .map(() => 1) // Loss is always 1R
       .filter(r => r > 0);
 
     const avgWinRR = winRRs.length > 0 ? winRRs.reduce((a, b) => a + b, 0) / winRRs.length : 0;
@@ -166,9 +142,8 @@ export function TradingDashboard() {
     const totalWinRR = winRRs.reduce((a, b) => a + b, 0);
     const totalLossRR = lossRRs.reduce((a, b) => a + b, 0);
     
-    // Calculate profit factor using actual P&L when available, fallback to R:R
+    // Calculate profit factor
     const profitFactor = totalLossPnL > 0 ? totalWinPnL / totalLossPnL : 
-                        totalLossRR > 0 ? (totalWinRR * riskAmount) / (totalLossRR * riskAmount) : 
                         totalWinPnL > 0 ? Infinity : 0;
 
     // Calculate streaks
@@ -176,8 +151,8 @@ export function TradingDashboard() {
     let currentLossStreak = 0;
     
     // Calculate from most recent trade backwards
-    for (let i = 0; i < filteredTrades.length; i++) {
-      const result = filteredTrades[i].result.toLowerCase();
+    for (let i = 0; i < tradesWithPnL.length; i++) {
+      const result = tradesWithPnL[i].result.toLowerCase();
       if (result === 'win') {
         currentWinStreak++;
         currentLossStreak = 0;
@@ -195,26 +170,13 @@ export function TradingDashboard() {
     
     // Calculate best day profit
     const tradesByDate: Record<string, number> = {};
-    filteredTrades.forEach(trade => {
+    tradesWithPnL.forEach(trade => {
       const dateKey = format(new Date(trade.date), 'yyyy-MM-dd');
-      let tradePnL = 0;
-      
-      if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
-        tradePnL = trade.pnl_dollar;
-      } else {
-        // Fallback to R:R calculation with fixed 1% risk
-        if (trade.result.toLowerCase() === 'win') {
-          tradePnL = (trade.rr || 0) * riskAmount;
-        } else if (trade.result.toLowerCase() === 'loss') {
-          tradePnL = -riskAmount;
-        }
-        // Breakeven contributes 0 to P&L
-      }
       
       if (!tradesByDate[dateKey]) {
         tradesByDate[dateKey] = 0;
       }
-      tradesByDate[dateKey] += tradePnL;
+      tradesByDate[dateKey] += trade.calculatedPnL;
     });
     
     let bestDayProfit = 0;
@@ -223,11 +185,11 @@ export function TradingDashboard() {
     }
 
     return {
-      totalTrades: filteredTrades.length,
+      totalTrades: tradesWithPnL.length,
       wins: wins.length,
       losses: losses.length,
       breakevens: breakevens.length,
-      winRate: filteredTrades.length > 0 ? (wins.length / filteredTrades.length) * 100 : 0,
+      winRate: tradesWithPnL.length > 0 ? (wins.length / tradesWithPnL.length) * 100 : 0,
       avgWinRR,
       avgLossRR,
       profitFactor,
@@ -239,7 +201,7 @@ export function TradingDashboard() {
       totalPnL,
       bestDayProfit
     };
-  }, [filteredTrades, activeAccount?.current_balance]);
+  }, [filteredTrades, activeAccount, calculatePnL]);
 
   const formattedTrades: FormattedTrade[] = filteredTrades.map(trade => ({
     id: trade.id,
