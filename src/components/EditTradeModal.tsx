@@ -147,6 +147,17 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Calculate risk amount based on account starting balance and risk percentage
+  const calculateRiskAmount = () => {
+    if (!activeAccount) return 0;
+    const riskPercentage = parseFloat(formData.risk_percentage);
+    if (isNaN(riskPercentage)) return 0;
+    
+    // Using starting_balance instead of current_balance for consistent risk calculation
+    const riskAmount = (activeAccount.starting_balance * riskPercentage) / 100;
+    return Math.round(riskAmount * 100) / 100; // Round to 2 decimal places
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -242,7 +253,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
               />
               {activeAccount && formData.risk_percentage && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Risk Amount: ${(activeAccount.current_balance * (Number(formData.risk_percentage) / 100)).toFixed(2)}
+                  Risk Amount: ${calculateRiskAmount().toFixed(2)}
                 </p>
               )}
             </div>

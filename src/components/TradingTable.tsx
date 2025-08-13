@@ -41,9 +41,9 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
       return Number(trade.pnl_dollar);
     }
     
-    // Calculate based on risk percentage and R:R ratio
+    // Calculate based on risk percentage and R:R ratio using starting balance
     const riskPercentage = trade.risk_percentage || 1.0; // Default to 1% if not set
-    const riskAmount = activeAccount.current_balance * (riskPercentage / 100);
+    const riskAmount = activeAccount.starting_balance * (riskPercentage / 100);
     
     switch (trade.result.toLowerCase()) {
       case 'win':

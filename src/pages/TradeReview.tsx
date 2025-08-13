@@ -85,8 +85,9 @@ export default function TradeReview() {
       return Number(trade.pnl_dollar);
     }
     
-    // Fallback to R:R based calculation
-    const riskAmount = activeAccount.starting_balance * (activeAccount.risk_per_trade / 100);
+    // Fallback to R:R based calculation using starting balance
+    const riskPercentage = trade.risk_percentage || 1.0; // Default to 1% if not set
+    const riskAmount = activeAccount.starting_balance * (riskPercentage / 100);
     
     if (trade.result === 'Win') {
       return riskAmount * Number(trade.rr || 0);
@@ -253,14 +254,21 @@ export default function TradeReview() {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Risk %</span>
                     <span className="font-medium text-card-foreground">
-                      {activeAccount.risk_per_trade}%
+                      {trade.risk_percentage ? `${trade.risk_percentage}%` : '1.0%'}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Risk Amount</span>
                     <span className="font-medium text-card-foreground">
-                      ${(activeAccount.starting_balance * (activeAccount.risk_per_trade / 100)).toFixed(2)}
+                      {activeAccount && trade.risk_percentage && (
+                        <>
+                          ${(
+                            activeAccount.starting_balance * 
+                            (parseFloat(trade.risk_percentage?.toString() || '1.0') / 100)
+                          ).toFixed(2)}
+                        </>
+                      )}
                     </span>
                   </div>
                 </>
