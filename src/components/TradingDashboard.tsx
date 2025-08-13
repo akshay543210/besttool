@@ -4,6 +4,7 @@ import { TimeFilter } from './TimeFilter';
 import { NewTradeModal } from './NewTradeModal';
 import { StatsCard } from './StatsCard';
 import { TradingTable } from './TradingTable';
+import { EquityChart } from './EquityChart';
 import { useTrades } from '@/hooks/useTrades';
 import { useAccounts } from '@/hooks/useAccounts';
 import { TrendingUp, TrendingDown, Target, DollarSign, BarChart3, User, Twitter, MessageCircle, Users } from 'lucide-react';
@@ -34,7 +35,8 @@ export function TradingDashboard() {
     loading,
     refetchTrades,
     calculateStats,
-    calculatePnL
+    calculatePnL,
+    getTradesByDate
   } = useTrades();
   const {
     getActiveAccount
@@ -202,6 +204,33 @@ export function TradingDashboard() {
       bestDayProfit
     };
   }, [filteredTrades, activeAccount, calculatePnL]);
+
+  // Generate equity curve data
+  const equityData = useMemo(() => {
+    if (!activeAccount || trades.length === 0) {
+      return [{ date: new Date().toISOString(), value: 0 }];
+    }
+
+    // Sort all trades by date
+    const sortedTrades = [...trades].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
+    let runningTotal = 0;
+    const equityPoints = [{ date: sortedTrades[0].date, value: 0 }];
+    
+    sortedTrades.forEach(trade => {
+      const pnl = calculatePnL(trade, activeAccount);
+      runningTotal += pnl;
+      
+      equityPoints.push({
+        date: trade.date,
+        value: runningTotal
+      });
+    });
+    
+    return equityPoints;
+  }, [trades, activeAccount, calculatePnL]);
 
   const formattedTrades: FormattedTrade[] = filteredTrades.map(trade => ({
     id: trade.id,
@@ -427,6 +456,18 @@ export function TradingDashboard() {
         </motion.div>
       </div>
 
+      {/* Equity Curve Chart */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.2 }}
+      >
+        <EquityChart 
+          data={equityData} 
+          startingBalance={activeAccount?.starting_balance || 0} 
+        />
+      </motion.div>
+
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">
         <NewTradeModal onTradeAdded={refetchTrades} />
@@ -440,7 +481,7 @@ export function TradingDashboard() {
       opacity: 1,
       y: 0
     }} transition={{
-      delay: 1.2
+      delay: 1.3
     }}>
         <TradingTable trades={filteredTrades} onTradeUpdated={refetchTrades} />
       </motion.div>
@@ -451,7 +492,7 @@ export function TradingDashboard() {
     }} animate={{
       opacity: 1
     }} transition={{
-      delay: 1.3
+      delay: 1.4
     }} className="text-center p-8 bg-muted/20 rounded-lg border border-border">
           <p className="text-muted-foreground">
             No trades found for the selected time period. Start by adding your first trade!
