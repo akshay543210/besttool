@@ -28,7 +28,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
     date: '',
     symbol: '',
     side: '',
-    setup_tag: '',
+    session: '',
     strategy_tag: '',
     rr: '',
     result: '',
@@ -42,7 +42,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         date: new Date(trade.date).toISOString().split('T')[0],
         symbol: trade.symbol || '',
         side: trade.side || '',
-        setup_tag: trade.setup_tag || '',
+        session: trade.session || '',
         strategy_tag: trade.strategy_tag || '',
         rr: trade.rr?.toString() || '',
         result: trade.result,
@@ -66,7 +66,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
     }
 
     // Validate required fields
-    if (!formData.symbol || !formData.side || !formData.result) {
+    if (!formData.symbol || !formData.side || !formData.result || !formData.session) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -106,7 +106,8 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         date: new Date(formData.date).toISOString(),
         symbol: formData.symbol || null,
         side: formData.side || null,
-        setup_tag: formData.setup_tag || null,
+        session: formData.session,
+        setup_tag: formData.session, // Keep for backward compatibility
         strategy_tag: formData.strategy_tag || null,
         rr: formData.rr ? Number(formData.rr) : null,
         result: formData.result,
@@ -191,20 +192,15 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
             </div>
 
             <div>
-              <Label htmlFor="setup_tag">Setup Tag</Label>
-              <Select value={formData.setup_tag} onValueChange={(value) => handleInputChange('setup_tag', value)}>
+              <Label htmlFor="session">Session *</Label>
+              <Select value={formData.session} onValueChange={(value) => handleInputChange('session', value)} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select setup" />
+                  <SelectValue placeholder="Select session" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Asia">Asia</SelectItem>
-                  <SelectItem value="NY Open">NY Open</SelectItem>
                   <SelectItem value="London">London</SelectItem>
-                  <SelectItem value="NY Close">NY Close</SelectItem>
-                  <SelectItem value="ORB">ORB</SelectItem>
-                  <SelectItem value="Breakout">Breakout</SelectItem>
-                  <SelectItem value="Retracement">Retracement</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="New York">New York</SelectItem>
                 </SelectContent>
               </Select>
             </div>

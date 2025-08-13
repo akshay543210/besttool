@@ -90,7 +90,7 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
                 <TableHead className="text-muted-foreground">Date</TableHead>
                 <TableHead className="text-muted-foreground">Symbol</TableHead>
                 <TableHead className="text-muted-foreground">Side</TableHead>
-                <TableHead className="text-muted-foreground">Setup Tag</TableHead>
+                <TableHead className="text-muted-foreground">Session</TableHead>
                 <TableHead className="text-muted-foreground">Risk %</TableHead>
                 <TableHead className="text-muted-foreground">R:R</TableHead>
                 <TableHead className="text-muted-foreground">Result</TableHead>
@@ -128,9 +128,9 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
                       )}
                     </TableCell>
                     <TableCell>
-                      {trade.setup_tag ? (
+                      {trade.session ? (
                         <Badge variant="outline" className="border-border text-muted-foreground">
-                          {trade.setup_tag}
+                          {trade.session}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">N/A</span>

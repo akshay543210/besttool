@@ -30,7 +30,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     date: new Date().toISOString().split('T')[0],
     symbol: '',
     side: '',
-    setup_tag: '',
+    session: '',
     rr: '',
     result: '',
     notes: '',
@@ -81,7 +81,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       date: new Date().toISOString().split('T')[0],
       symbol: '',
       side: '',
-      setup_tag: '',
+      session: '',
       rr: '',
       result: '',
       notes: '',
@@ -112,10 +112,10 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     }
 
     // Validate required fields
-    if (!formData.symbol || !formData.side || !formData.result) {
+    if (!formData.symbol || !formData.side || !formData.result || !formData.session) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields (Symbol, Side, and Result)",
+        description: "Please fill in all required fields (Symbol, Side, Session, and Result)",
         variant: "destructive",
       });
       return;
@@ -168,10 +168,10 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
           user_id: user.id,
           account_id: activeAccount.id,
           date: new Date(formData.date).toISOString(),
-          session: formData.setup_tag || 'Other', // Keep session for compatibility
+          session: formData.session,
           symbol: formData.symbol,
           side: formData.side,
-          setup_tag: formData.setup_tag || null,
+          setup_tag: formData.session, // Keep for backward compatibility
           rr: formData.rr ? Number(formData.rr) : null,
           result: formData.result,
           notes: formData.notes || null,
@@ -271,23 +271,19 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="setup_tag">Setup Tag</Label>
+              <Label htmlFor="session">Session *</Label>
               <Select
-                value={formData.setup_tag}
-                onValueChange={(value) => setFormData({ ...formData, setup_tag: value })}
+                value={formData.session}
+                onValueChange={(value) => setFormData({ ...formData, session: value })}
+                required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select setup" />
+                  <SelectValue placeholder="Select session" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Asia">Asia</SelectItem>
                   <SelectItem value="London">London</SelectItem>
-                  <SelectItem value="NY Open">NY Open</SelectItem>
-                  <SelectItem value="NY Close">NY Close</SelectItem>
-                  <SelectItem value="ORB">ORB</SelectItem>
-                  <SelectItem value="Breakout">Breakout</SelectItem>
-                  <SelectItem value="Retracement">Retracement</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="New York">New York</SelectItem>
                 </SelectContent>
               </Select>
             </div>

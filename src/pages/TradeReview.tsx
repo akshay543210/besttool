@@ -85,6 +85,94 @@ export default function TradeReview() {
       return Number(trade.pnl_dollar);
     }
     
+    //<dyad-write path="src/pages/TradeReview.tsx" description="Updating TradeReview page to display Session instead of Setup Tag">
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Edit3, DollarSign, Target, TrendingUp, Calendar, Clock, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAccounts } from '@/hooks/useAccounts';
+import { motion } from "framer-motion";
+import type { Trade } from "@/hooks/useTrades";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { cn } from "@/lib/utils";
+
+export default function TradeReview() {
+  const { tradeId } = useParams<{ tradeId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { getActiveAccount } = useAccounts();
+  const { toast } = useToast();
+  const activeAccount = getActiveAccount();
+
+  const [trade, setTrade] = useState<Trade | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [strategyCount, setStrategyCount] = useState(0);
+
+  useEffect(() => {
+    if (!tradeId || !user) return;
+    
+    fetchTrade();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tradeId, user]);
+
+  const fetchTrade = async () => {
+    if (!tradeId || !user) return;
+    
+    try {
+      setLoading(true);
+      
+      // Fetch the specific trade
+      const { data: tradeData, error: tradeError } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('id', tradeId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (tradeError) throw tradeError;
+      
+      setTrade(tradeData);
+
+      // Fetch strategy count if strategy_tag exists
+      if (tradeData.strategy_tag) {
+        const { count, error: countError } = await supabase
+          .from('trades')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('strategy_tag', tradeData.strategy_tag);
+
+        if (!countError && count !== null) {
+          setStrategyCount(count);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching trade:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load trade details",
+        variant: "destructive",
+      });
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculatePnL = (trade: Trade) => {
+    if (!activeAccount) return 0;
+    
+    // Use actual pnl_dollar if available
+    if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
+      return Number(trade.pnl_dollar);
+    }
+    
     // Fallback to R:R based calculation
     const riskAmount = activeAccount.starting_balance * (activeAccount.risk_per_trade / 100);
     
@@ -284,11 +372,20 @@ export default function TradeReview() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Strategy</span>
+                <span className="text-muted-foreground">Session</span>
                 <span className="font-medium text-card-foreground">
-                  {trade.strategy_tag || 'No strategy tagged'}
+                  {trade.session}
                 </span>
               </div>
+
+              {trade.strategy_tag && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Strategy</span>
+                  <span className="font-medium text-card-foreground">
+                    {trade.strategy_tag}
+                  </span>
+                </div>
+              )}
 
               {trade.strategy_tag && strategyCount > 0 && (
                 <div className="flex items-center justify-between">
