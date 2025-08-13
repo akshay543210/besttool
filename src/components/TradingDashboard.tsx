@@ -116,18 +116,46 @@ export function TradingDashboard() {
     const breakevens = filteredTrades.filter(t => t.result.toLowerCase() === 'breakeven');
 
     // Calculate P&L using actual pnl_dollar values when available
-    const totalWinPnL = wins.reduce((sum, trade) => sum + (trade.pnl_dollar || 0), 0);
-    const totalLossPnL = losses.reduce((sum, trade) => sum + Math.abs(trade.pnl_dollar || 0), 0);
+    const totalWinPnL = wins.reduce((sum, trade) => {
+      const pnl = trade.pnl_dollar !== null && trade.pnl_dollar !== undefined 
+        ? trade.pnl_dollar 
+        : 0;
+      return sum + pnl;
+    }, 0);
+    
+    const totalLossPnL = losses.reduce((sum, trade) => {
+      const pnl = trade.pnl_dollar !== null && trade.pnl_dollar !== undefined 
+        ? Math.abs(trade.pnl_dollar) 
+        : 0;
+      return sum + pnl;
+    }, 0);
     
     // For R:R based calculations when pnl_dollar is not available
     const riskAmount = activeAccount ? activeAccount.starting_balance * (activeAccount.risk_per_trade / 100) : 0;
+    
+    // Calculate total P&L combining actual P&L and R:R based calculations
+    let totalPnL = 0;
+    filteredTrades.forEach(trade => {
+      if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
+        totalPnL += trade.pnl_dollar;
+      } else {
+        // Fallback to R:R calculation
+        if (trade.result.toLowerCase() === 'win') {
+          totalPnL += (trade.rr || 0) * riskAmount;
+        } else if (trade.result.toLowerCase() === 'loss') {
+          totalPnL -= riskAmount;
+        }
+        // Breakeven contributes 0 to P&L
+      }
+    });
+    
     const winRRs = wins
-      .filter(t => !t.pnl_dollar)
+      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
       .map(t => t.rr || 0)
       .filter(rr => rr > 0);
       
     const lossRRs = losses
-      .filter(t => !t.pnl_dollar)
+      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
       .map(t => 1) // Loss is always 1R
       .filter(r => r > 0);
 
@@ -164,17 +192,23 @@ export function TradingDashboard() {
     const topWinRR = winRRs.length > 0 ? Math.max(...winRRs) : 0;
     const topLossRR = 1; // Loss is always 1R
     
-    // Calculate total RR using actual P&L when available
-    const totalRR = totalWinPnL - totalLossPnL;
-    
     // Calculate best day profit
     const tradesByDate: Record<string, number> = {};
     filteredTrades.forEach(trade => {
       const dateKey = format(new Date(trade.date), 'yyyy-MM-dd');
-      const tradePnL = trade.pnl_dollar !== null && trade.pnl_dollar !== undefined ? 
-        trade.pnl_dollar : 
-        (trade.result.toLowerCase() === 'win' ? (trade.rr || 0) * riskAmount : 
-         trade.result.toLowerCase() === 'loss' ? -riskAmount : 0);
+      let tradePnL = 0;
+      
+      if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
+        tradePnL = trade.pnl_dollar;
+      } else {
+        // Fallback to R:R calculation
+        if (trade.result.toLowerCase() === 'win') {
+          tradePnL = (trade.rr || 0) * riskAmount;
+        } else if (trade.result.toLowerCase() === 'loss') {
+          tradePnL = -riskAmount;
+        }
+        // Breakeven contributes 0 to P&L
+      }
       
       if (!tradesByDate[dateKey]) {
         tradesByDate[dateKey] = 0;
@@ -200,8 +234,8 @@ export function TradingDashboard() {
       currentLossStreak,
       topWinRR,
       topLossRR,
-      totalRR,
-      totalPnL: totalRR, // Using totalRR as totalPnL for consistency
+      totalRR: totalPnL, // Using calculated total P&L
+      totalPnL,
       bestDayProfit
     };
   }, [filteredTrades, activeAccount?.starting_balance, activeAccount?.risk_per_trade]);
@@ -378,7 +412,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.7
       }}>
-          <StatsCard title="PNL $" value={`${filteredStats.totalPnL > 0 ? '+' : ''}$${Math.abs(filteredStats.totalPnL).toFixed(2)}`} positive={filteredStats.totalPnL >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL $" value={`${filteredStats.totalPnL > 0 ? '+' : ''}$${Math.abs(filteredStats.totalPnL).toFixed(2)}`} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -390,7 +424,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.8
       }}>
-          <StatsCard title="PNL %" value={`${filteredStats.totalPnL > 0 ? '+' : ''}${activeAccount ? (filteredStats.totalPnL / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} positive={filteredStats.totalPnL >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL %" value={`${filteredStats.totalPnL > 0 ? '+' : ''}${activeAccount ? (filteredStats.totalPnL / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -414,7 +448,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 1.0
       }}>
-          <StatsCard title="BEST DAY" value={`${filteredStats.bestDayProfit > 0 ? '+' : ''}$${Math.abs(filteredStats.bestDayProfit).toFixed(2)}`} positive={filteredStats.bestDayProfit >= 0} icon={<TrendingUp className="w-5 h-5" />} />
+          <StatsCard title="BEST DAY" value={`${filteredStats.bestDayProfit > 0 ? '+' : ''}$${Math.abs(filteredStats.bestDayProfit).toFixed(2)}`} icon={<TrendingUp className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
