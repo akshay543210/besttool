@@ -107,7 +107,7 @@ export function TradingDashboard() {
         topLossRR: 0,
         totalRR: 0,
         totalPnL: 0,
-        bestDay: 'N/A'
+        bestDayProfit: 0
       };
     }
 
@@ -167,11 +167,12 @@ export function TradingDashboard() {
     // Calculate total RR using actual P&L when available
     const totalRR = totalWinPnL - totalLossPnL;
     
-    // Calculate best day
+    // Calculate best day profit
     const tradesByDate: Record<string, number> = {};
     filteredTrades.forEach(trade => {
       const dateKey = format(new Date(trade.date), 'yyyy-MM-dd');
-      const tradePnL = trade.pnl_dollar || 
+      const tradePnL = trade.pnl_dollar !== null && trade.pnl_dollar !== undefined ? 
+        trade.pnl_dollar : 
         (trade.result.toLowerCase() === 'win' ? (trade.rr || 0) * riskAmount : 
          trade.result.toLowerCase() === 'loss' ? -riskAmount : 0);
       
@@ -181,23 +182,9 @@ export function TradingDashboard() {
       tradesByDate[dateKey] += tradePnL;
     });
     
-    let bestDay = 'N/A';
-    let bestDayValue = -Infinity;
-    
-    Object.entries(tradesByDate).forEach(([date, pnl]) => {
-      if (pnl > bestDayValue) {
-        bestDayValue = pnl;
-        bestDay = format(new Date(date), 'MMM d, yyyy');
-      }
-    });
-    
-    // If no positive day found, use the highest value day
-    if (bestDayValue === -Infinity) {
-      const entries = Object.entries(tradesByDate);
-      if (entries.length > 0) {
-        const [date, pnl] = entries.reduce((max, entry) => entry[1] > max[1] ? entry : max);
-        bestDay = format(new Date(date), 'MMM d, yyyy');
-      }
+    let bestDayProfit = 0;
+    if (Object.keys(tradesByDate).length > 0) {
+      bestDayProfit = Math.max(...Object.values(tradesByDate));
     }
 
     return {
@@ -215,7 +202,7 @@ export function TradingDashboard() {
       topLossRR,
       totalRR,
       totalPnL: totalRR, // Using totalRR as totalPnL for consistency
-      bestDay
+      bestDayProfit
     };
   }, [filteredTrades, activeAccount?.starting_balance, activeAccount?.risk_per_trade]);
 
@@ -427,7 +414,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 1.0
       }}>
-          <StatsCard title="BEST DAY" value={filteredStats.bestDay} positive={true} icon={<TrendingUp className="w-5 h-5" />} />
+          <StatsCard title="BEST DAY" value={`${filteredStats.bestDayProfit > 0 ? '+' : ''}$${Math.abs(filteredStats.bestDayProfit).toFixed(2)}`} positive={filteredStats.bestDayProfit >= 0} icon={<TrendingUp className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
