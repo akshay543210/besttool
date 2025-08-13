@@ -8,7 +8,7 @@ import { useTrades } from '@/hooks/useTrades';
 import { useAccounts } from '@/hooks/useAccounts';
 import { TrendingUp, TrendingDown, Target, DollarSign, BarChart3, User, Twitter, MessageCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, subYears, isSameDay, isSameWeek, isSameMonth, isSameYear } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, subYears, isSameDay, isSameWeek, isSameMonth, isSameYear, format } from 'date-fns';
 
 interface FormattedTrade {
   id: string;
@@ -106,6 +106,8 @@ export function TradingDashboard() {
         topWinRR: 0,
         topLossRR: 0,
         totalRR: 0,
+        totalPnL: 0,
+        bestDay: 'N/A'
       };
     }
 
@@ -118,14 +120,14 @@ export function TradingDashboard() {
     const totalLossPnL = losses.reduce((sum, trade) => sum + Math.abs(trade.pnl_dollar || 0), 0);
     
     // For R:R based calculations when pnl_dollar is not available
-    const riskAmount = activeAccount ? activeAccount.starting_balance * 0.01 : 0;
+    const riskAmount = activeAccount ? activeAccount.starting_balance * (activeAccount.risk_per_trade / 100) : 0;
     const winRRs = wins
-      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
+      .filter(t => !t.pnl_dollar)
       .map(t => t.rr || 0)
       .filter(rr => rr > 0);
       
     const lossRRs = losses
-      .filter(t => t.pnl_dollar === null || t.pnl_dollar === undefined)
+      .filter(t => !t.pnl_dollar)
       .map(t => 1) // Loss is always 1R
       .filter(r => r > 0);
 
@@ -164,6 +166,39 @@ export function TradingDashboard() {
     
     // Calculate total RR using actual P&L when available
     const totalRR = totalWinPnL - totalLossPnL;
+    
+    // Calculate best day
+    const tradesByDate: Record<string, number> = {};
+    filteredTrades.forEach(trade => {
+      const dateKey = format(new Date(trade.date), 'yyyy-MM-dd');
+      const tradePnL = trade.pnl_dollar || 
+        (trade.result.toLowerCase() === 'win' ? (trade.rr || 0) * riskAmount : 
+         trade.result.toLowerCase() === 'loss' ? -riskAmount : 0);
+      
+      if (!tradesByDate[dateKey]) {
+        tradesByDate[dateKey] = 0;
+      }
+      tradesByDate[dateKey] += tradePnL;
+    });
+    
+    let bestDay = 'N/A';
+    let bestDayValue = -Infinity;
+    
+    Object.entries(tradesByDate).forEach(([date, pnl]) => {
+      if (pnl > bestDayValue) {
+        bestDayValue = pnl;
+        bestDay = format(new Date(date), 'MMM d, yyyy');
+      }
+    });
+    
+    // If no positive day found, use the highest value day
+    if (bestDayValue === -Infinity) {
+      const entries = Object.entries(tradesByDate);
+      if (entries.length > 0) {
+        const [date, pnl] = entries.reduce((max, entry) => entry[1] > max[1] ? entry : max);
+        bestDay = format(new Date(date), 'MMM d, yyyy');
+      }
+    }
 
     return {
       totalTrades: filteredTrades.length,
@@ -179,8 +214,10 @@ export function TradingDashboard() {
       topWinRR,
       topLossRR,
       totalRR,
+      totalPnL: totalRR, // Using totalRR as totalPnL for consistency
+      bestDay
     };
-  }, [filteredTrades, activeAccount?.starting_balance]);
+  }, [filteredTrades, activeAccount?.starting_balance, activeAccount?.risk_per_trade]);
 
   const formattedTrades: FormattedTrade[] = filteredTrades.map(trade => ({
     id: trade.id,
@@ -354,7 +391,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.7
       }}>
-          <StatsCard title="PNL $" value={`${filteredStats.totalRR > 0 ? '+' : ''}$${Math.abs(filteredStats.totalRR).toFixed(2)}`} positive={filteredStats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL $" value={`${filteredStats.totalPnL > 0 ? '+' : ''}$${Math.abs(filteredStats.totalPnL).toFixed(2)}`} positive={filteredStats.totalPnL >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -366,7 +403,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.8
       }}>
-          <StatsCard title="PNL %" value={`${filteredStats.totalRR > 0 ? '+' : ''}${activeAccount ? (filteredStats.totalRR / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} positive={filteredStats.totalRR >= 0} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL %" value={`${filteredStats.totalPnL > 0 ? '+' : ''}${activeAccount ? (filteredStats.totalPnL / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} positive={filteredStats.totalPnL >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -390,7 +427,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 1.0
       }}>
-          <StatsCard title="BEST DAY" value="N/A" positive={true} icon={<TrendingUp className="w-5 h-5" />} />
+          <StatsCard title="BEST DAY" value={filteredStats.bestDay} positive={true} icon={<TrendingUp className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
