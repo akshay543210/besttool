@@ -2,8 +2,14 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://notyhakhjrmzhnnjbiqp.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vdHloYWtoanJtemhubmpiaXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5OTg1MTgsImV4cCI6MjA2NjU3NDUxOH0.l5yHvuD7ruZuwDyiatihGFxapNB7VbHN9AMkddyHFCI";
+// Use environment variables instead of hardcoded values
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+// Validate that we have the required environment variables
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error('Missing Supabase environment variables. Please check your .env file or Vercel environment settings.');
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

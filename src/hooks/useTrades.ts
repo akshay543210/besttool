@@ -68,19 +68,38 @@ export function useTrades() {
 
     try {
       setLoading(true);
+      
+      // Add logging to help diagnose issues
+      console.log('Fetching trades for user:', user.id);
+      
       const { data, error } = await supabase
         .from('trades')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          hint: error.hint
+        });
+        throw error;
+      }
 
+      console.log('Successfully fetched trades:', data?.length || 0);
       setAllTrades(data || []);
       setError(null);
     } catch (err) {
       console.error('Error fetching trades:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch trades');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch trades';
+      setError(errorMessage);
+      
+      // Show user-friendly error message
+      if (errorMessage.includes('Invalid API key') || errorMessage.includes('Unauthorized')) {
+        console.error('Authentication error: Please check your Supabase environment variables');
+      }
     } finally {
       setLoading(false);
     }
@@ -140,6 +159,8 @@ export function useTrades() {
   useEffect(() => {
     if (!user) return;
 
+    console.log('Setting up real-time subscription for trades');
+    
     const channel = supabase
       .channel('trades-changes')
       .on(
@@ -150,13 +171,20 @@ export function useTrades() {
           table: 'trades',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Trades changed:', payload);
           fetchTrades();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Real-time subscription error');
+        }
+      });
 
     return () => {
+      console.log('Removing real-time subscription');
       supabase.removeChannel(channel);
     };
   }, [user?.id, fetchTrades]);

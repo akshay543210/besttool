@@ -31,19 +31,31 @@ export function useAccounts() {
 
     try {
       setLoading(true);
+      console.log('Fetching accounts for user:', user.id);
+      
       const { data, error } = await supabase
         .from('accounts')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching accounts:', error);
+        throw error;
+      }
 
+      console.log('Successfully fetched accounts:', data?.length || 0);
       setAccounts(data || []);
       setError(null);
     } catch (err) {
       console.error('Error fetching accounts:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch accounts');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch accounts';
+      setError(errorMessage);
+      
+      // Show user-friendly error message
+      if (errorMessage.includes('Invalid API key') || errorMessage.includes('Unauthorized')) {
+        console.error('Authentication error: Please check your Supabase environment variables');
+      }
     } finally {
       setLoading(false);
     }
@@ -73,7 +85,10 @@ export function useAccounts() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating account:', error);
+        throw error;
+      }
 
       await fetchAccounts();
       
@@ -104,7 +119,10 @@ export function useAccounts() {
         .update(updates)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating account:', error);
+        throw error;
+      }
 
       await fetchAccounts();
       toast({
@@ -128,7 +146,10 @@ export function useAccounts() {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting account:', error);
+        throw error;
+      }
 
       await fetchAccounts();
       toast({
@@ -156,7 +177,10 @@ export function useAccounts() {
         account_id_param: accountId
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error setting active account:', error);
+        throw error;
+      }
 
       await fetchAccounts();
       
@@ -198,6 +222,8 @@ export function useAccounts() {
   useEffect(() => {
     if (!user) return;
 
+    console.log('Setting up real-time subscription for accounts');
+    
     const channel = supabase
       .channel('account-changes')
       .on(
@@ -208,14 +234,21 @@ export function useAccounts() {
           table: 'accounts',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Accounts changed:', payload);
           // Refetch accounts when any change occurs
           fetchAccounts();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Accounts subscription status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Accounts real-time subscription error');
+        }
+      });
 
     return () => {
+      console.log('Removing accounts real-time subscription');
       supabase.removeChannel(channel);
     };
   }, [user]);
