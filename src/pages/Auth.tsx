@@ -63,9 +63,15 @@ export default function Auth() {
         });
       } else {
         toast({
-          title: "Success",
-          description: "Check your email for the confirmation link",
+          title: "Account Created",
+          description: "Please check your email to confirm your account",
         });
+        // Switch to sign in tab after successful signup
+        const tabsList = document.querySelector('[role="tablist"]');
+        if (tabsList) {
+          const signInTab = tabsList.querySelector('[data-value="signin"]') as HTMLButtonElement;
+          if (signInTab) signInTab.click();
+        }
       }
     } catch (err) {
       toast({
@@ -155,7 +161,8 @@ export default function Auth() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="bg-input border-border"
-                    placeholder="Create a password"
+                    placeholder="Create a password (at least 6 characters)"
+                    minLength={6}
                   />
                 </div>
                 <Button 
