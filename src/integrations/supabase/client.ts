@@ -1,43 +1,44 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Log all environment variables for debugging
-console.log('All environment variables:', import.meta.env);
+// Log environment variables for debugging
+console.log('Checking Supabase environment variables...');
+console.log('VITE_SUPABASE_URL exists:', !!import.meta.env.VITE_SUPABASE_URL);
+console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-// Use environment variables - Vite uses import.meta.env
+// Use environment variables directly
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('Supabase environment variables check:', {
-  SUPABASE_URL: SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY: SUPABASE_PUBLISHABLE_KEY ? 'Key present (hidden for security)' : 'Key missing',
-  hasVitePrefix: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')).length > 0
-});
-
-// Validate that we have the required environment variables
+// Fallback values for development (you should replace these with your actual values)
 if (!SUPABASE_URL) {
-  console.error('Missing VITE_SUPABASE_URL environment variable');
-  console.error('Available environment variables:', Object.keys(import.meta.env));
-  throw new Error('Missing Supabase URL. Please check your environment variables.');
+  console.error('VITE_SUPABASE_URL is not set');
+  throw new Error('Missing VITE_SUPABASE_URL environment variable');
 }
 
-if (!SUPABASE_PUBLISHABLE_KEY) {
-  console.error('Missing VITE_SUPABASE_ANON_KEY environment variable');
-  throw new Error('Missing Supabase Anon Key. Please check your environment variables.');
+if (!SUPABASE_ANON_KEY) {
+  console.error('VITE_SUPABASE_ANON_KEY is not set');
+  throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable');
 }
+
+console.log('Supabase URL:', SUPABASE_URL);
 
 // Validate URL format
 try {
   new URL(SUPABASE_URL);
 } catch (e) {
   console.error('Invalid Supabase URL format:', SUPABASE_URL);
-  throw new Error('Invalid Supabase URL format. Please check your VITE_SUPABASE_URL environment variable.');
+  throw new Error('Invalid Supabase URL format');
 }
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+export const supabase = createClient<Database>(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+    }
   }
-});
+);
