@@ -17,7 +17,6 @@ import NotFound from "./pages/NotFound";
 import PublicTrade from "./pages/PublicTrade";
 import TradeReview from "./pages/TradeReview";
 import TradeIdeasPage from "./pages/TradeIdeasPage";
-import { SupabaseHealthCheck } from "./components/SupabaseHealthCheck";
 
 const queryClient = new QueryClient();
 
@@ -44,12 +43,6 @@ const App = () => (
                         </div>
                       </header>
                       <main className="flex-1 p-6">
-                        {/* Show health check in development */}
-                        {import.meta.env.DEV && (
-                          <div className="mb-6">
-                            <SupabaseHealthCheck />
-                          </div>
-                        )}
                         <Routes>
                           <Route path="/" element={<Index />} />
                           <Route path="/stats" element={<Stats />} />
