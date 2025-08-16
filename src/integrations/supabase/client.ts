@@ -1,18 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Log all environment variables for debugging
+console.log('All environment variables:', import.meta.env);
+
 // Use environment variables - Vite uses import.meta.env
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('Supabase environment variables:', {
-  url: SUPABASE_URL ? 'URL present' : 'URL missing',
-  key: SUPABASE_PUBLISHABLE_KEY ? 'Key present' : 'Key missing'
+console.log('Supabase environment variables check:', {
+  SUPABASE_URL: SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY: SUPABASE_PUBLISHABLE_KEY ? 'Key present (hidden for security)' : 'Key missing',
+  hasVitePrefix: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')).length > 0
 });
 
 // Validate that we have the required environment variables
 if (!SUPABASE_URL) {
   console.error('Missing VITE_SUPABASE_URL environment variable');
+  console.error('Available environment variables:', Object.keys(import.meta.env));
   throw new Error('Missing Supabase URL. Please check your environment variables.');
 }
 

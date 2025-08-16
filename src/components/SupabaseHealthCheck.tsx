@@ -10,6 +10,7 @@ export function SupabaseHealthCheck() {
     error?: string; 
     details?: string;
     url?: string;
+    availableKeys?: string[];
   } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -20,11 +21,17 @@ export function SupabaseHealthCheck() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
+      // Get all available environment variables (filtered for security)
+      const availableKeys = Object.keys(import.meta.env).filter(key => 
+        key.includes('VITE') || key.includes('SUPABASE')
+      );
+      
       if (!supabaseUrl) {
         setStatus({
           success: false,
           error: 'Missing Supabase URL environment variable',
-          details: 'VITE_SUPABASE_URL not found'
+          details: 'VITE_SUPABASE_URL not found',
+          availableKeys
         });
         return;
       }
@@ -33,7 +40,8 @@ export function SupabaseHealthCheck() {
         setStatus({
           success: false,
           error: 'Missing Supabase Anon Key environment variable',
-          details: 'VITE_SUPABASE_ANON_KEY not found'
+          details: 'VITE_SUPABASE_ANON_KEY not found',
+          availableKeys
         });
         return;
       }
@@ -45,7 +53,8 @@ export function SupabaseHealthCheck() {
         setStatus({
           success: false,
           error: 'Invalid Supabase URL format',
-          details: 'The Supabase URL is not a valid URL'
+          details: 'The Supabase URL is not a valid URL',
+          availableKeys
         });
         return;
       }
@@ -53,7 +62,8 @@ export function SupabaseHealthCheck() {
       setStatus({
         success: true,
         url: supabaseUrl,
-        details: 'Environment variables are properly configured'
+        details: 'Environment variables are properly configured',
+        availableKeys
       });
     } catch (error) {
       setStatus({
@@ -116,6 +126,15 @@ export function SupabaseHealthCheck() {
             <div className="text-sm">
               <span className="text-muted-foreground">Details: </span>
               <span className="text-card-foreground">{status.details}</span>
+            </div>
+          )}
+          
+          {status.availableKeys && status.availableKeys.length > 0 && (
+            <div className="text-sm">
+              <span className="text-muted-foreground">Available env keys: </span>
+              <span className="font-mono text-card-foreground">
+                {status.availableKeys.join(', ')}
+              </span>
             </div>
           )}
         </div>
