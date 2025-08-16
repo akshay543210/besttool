@@ -21,20 +21,28 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signIn(email, password);
-    
-    if (error) {
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        toast({
+          title: "Error signing in",
+          description: error.message || "Invalid email or password",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Signed in successfully",
+        });
+        navigate('/');
+      }
+    } catch (err) {
       toast({
-        title: "Error signing in",
-        description: error.message,
+        title: "Error",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Signed in successfully",
-      });
-      navigate('/');
     }
     
     setLoading(false);
@@ -44,18 +52,26 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signUp(email, password);
-    
-    if (error) {
+    try {
+      const { error } = await signUp(email, password);
+      
+      if (error) {
+        toast({
+          title: "Error signing up",
+          description: error.message || "Failed to create account",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Check your email for the confirmation link",
+        });
+      }
+    } catch (err) {
       toast({
-        title: "Error signing up",
-        description: error.message,
+        title: "Error",
+        description: "An unexpected error occurred",
         variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Check your email for the confirmation link",
       });
     }
     
@@ -91,6 +107,7 @@ export default function Auth() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="bg-input border-border"
+                    placeholder="Enter your email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -102,6 +119,7 @@ export default function Auth() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="bg-input border-border"
+                    placeholder="Enter your password"
                   />
                 </div>
                 <Button 
@@ -125,6 +143,7 @@ export default function Auth() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="bg-input border-border"
+                    placeholder="Enter your email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -136,6 +155,7 @@ export default function Auth() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="bg-input border-border"
+                    placeholder="Create a password"
                   />
                 </div>
                 <Button 
