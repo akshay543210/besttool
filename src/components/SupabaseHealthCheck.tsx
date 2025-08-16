@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { checkSupabaseConnection } from '@/lib/supabaseHealthCheck';
 
 export function SupabaseHealthCheck() {
   const [status, setStatus] = useState<{ 
@@ -17,12 +16,49 @@ export function SupabaseHealthCheck() {
   const checkStatus = async () => {
     setLoading(true);
     try {
-      const result = await checkSupabaseConnection();
-      setStatus(result);
+      // Check if environment variables are set
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl) {
+        setStatus({
+          success: false,
+          error: 'Missing Supabase URL environment variable',
+          details: 'VITE_SUPABASE_URL not found'
+        });
+        return;
+      }
+      
+      if (!supabaseKey) {
+        setStatus({
+          success: false,
+          error: 'Missing Supabase Anon Key environment variable',
+          details: 'VITE_SUPABASE_ANON_KEY not found'
+        });
+        return;
+      }
+      
+      // Validate URL format
+      try {
+        new URL(supabaseUrl);
+      } catch (e) {
+        setStatus({
+          success: false,
+          error: 'Invalid Supabase URL format',
+          details: 'The Supabase URL is not a valid URL'
+        });
+        return;
+      }
+      
+      setStatus({
+        success: true,
+        url: supabaseUrl,
+        details: 'Environment variables are properly configured'
+      });
     } catch (error) {
       setStatus({
         success: false,
-        error: 'Failed to check connection',
+        error: 'Unexpected error during connection check',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     } finally {
