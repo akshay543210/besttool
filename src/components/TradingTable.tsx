@@ -77,6 +77,11 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
     navigate(`/review/${tradeId}`);
   };
 
+  // Sort trades: newest first
+  const sortedTrades = [...trades].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -99,7 +104,7 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trades.map((trade, index) => {
+              {sortedTrades.map((trade, index) => {
                 const tradePnL = calculateTradePnL(trade);
                 return (
                   <motion.tr
@@ -259,7 +264,7 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
           </Table>
         </div>
         
-        {trades.length === 0 && (
+        {sortedTrades.length === 0 && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No trades found for the selected time period.</p>
           </div>
