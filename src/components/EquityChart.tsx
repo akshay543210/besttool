@@ -21,21 +21,32 @@ interface EquityChartProps {
 }
 
 export function EquityChart({ data, startingBalance }: EquityChartProps) {
-  // Format data for the chart
-  const chartData = data.map((point, index) => ({
-    ...point,
-    date: format(new Date(point.date), 'MMM dd'),
-    cumulative: point.value,
-    displayValue: point.value >= 0 
-      ? `+$${Math.abs(point.value).toFixed(2)}` 
-      : `-$${Math.abs(point.value).toFixed(2)}`
-  }));
+  // Format data for the chart with proper cumulative values
+  const chartData = data.map((point, index) => {
+    // For the first point, we show the starting balance
+    if (index === 0) {
+      return {
+        trade: 0,
+        date: 'Start',
+        balance: startingBalance,
+        displayDate: 'Start'
+      };
+    }
+    
+    // For subsequent points, we show the cumulative balance
+    return {
+      trade: index,
+      date: point.date,
+      balance: startingBalance + point.value,
+      displayDate: format(new Date(point.date), 'MMM dd')
+    };
+  });
 
   // Calculate min and max values for Y-axis scaling
-  const values = chartData.map(d => d.cumulative);
-  const minValue = values.length > 0 ? Math.min(...values, 0) : 0;
-  const maxValue = values.length > 0 ? Math.max(...values, 0) : 0;
-  const yAxisPadding = Math.max(Math.abs(minValue), Math.abs(maxValue)) * 0.1 || 100;
+  const values = chartData.map(d => d.balance);
+  const minValue = values.length > 0 ? Math.min(...values) : startingBalance;
+  const maxValue = values.length > 0 ? Math.max(...values) : startingBalance;
+  const yAxisPadding = Math.max(Math.abs(minValue - startingBalance), Math.abs(maxValue - startingBalance)) * 0.1 || 100;
 
   return (
     <Card className="bg-gradient-card shadow-card border-border">
@@ -54,7 +65,7 @@ export function EquityChart({ data, startingBalance }: EquityChartProps) {
             >
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
               <XAxis 
-                dataKey="date" 
+                dataKey="displayDate" 
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
@@ -76,18 +87,18 @@ export function EquityChart({ data, startingBalance }: EquityChartProps) {
                   color: 'hsl(var(--card-foreground))'
                 }}
                 formatter={(value) => [`$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Equity']}
-                labelFormatter={(label) => `Date: ${label}`}
+                labelFormatter={(label, data) => `Date: ${data[0]?.payload?.date !== 'Start' ? format(new Date(data[0]?.payload?.date), 'MMM dd, yyyy') : 'Start'}`}
               />
-              <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+              <ReferenceLine y={startingBalance} stroke="hsl(var(--border))" strokeDasharray="3 3" />
               <Line
                 type="monotone"
-                dataKey="cumulative"
+                dataKey="balance"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 dot={{ 
                   stroke: 'hsl(var(--primary))', 
                   strokeWidth: 2, 
-                  r: 3,
+                  r: 4,
                   fill: 'hsl(var(--card))'
                 }}
                 activeDot={{ 
