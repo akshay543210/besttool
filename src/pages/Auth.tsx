@@ -21,28 +21,20 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     
-    try {
-      const { error } = await signIn(email, password);
-      
-      if (error) {
-        toast({
-          title: "Error signing in",
-          description: error.message || "Invalid email or password",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Signed in successfully",
-        });
-        navigate('/');
-      }
-    } catch (err) {
+    const { error } = await signIn(email, password);
+    
+    if (error) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: "Error signing in",
+        description: error.message,
         variant: "destructive",
       });
+    } else {
+      toast({
+        title: "Success",
+        description: "Signed in successfully",
+      });
+      navigate('/');
     }
     
     setLoading(false);
@@ -52,32 +44,18 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     
-    try {
-      const { error } = await signUp(email, password);
-      
-      if (error) {
-        toast({
-          title: "Error signing up",
-          description: error.message || "Failed to create account",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Account Created",
-          description: "Please check your email to confirm your account",
-        });
-        // Switch to sign in tab after successful signup
-        const tabsList = document.querySelector('[role="tablist"]');
-        if (tabsList) {
-          const signInTab = tabsList.querySelector('[data-value="signin"]') as HTMLButtonElement;
-          if (signInTab) signInTab.click();
-        }
-      }
-    } catch (err) {
+    const { error } = await signUp(email, password);
+    
+    if (error) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: "Error signing up",
+        description: error.message,
         variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Check your email for the confirmation link",
       });
     }
     
@@ -113,7 +91,6 @@ export default function Auth() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="bg-input border-border"
-                    placeholder="Enter your email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -125,7 +102,6 @@ export default function Auth() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="bg-input border-border"
-                    placeholder="Enter your password"
                   />
                 </div>
                 <Button 
@@ -149,7 +125,6 @@ export default function Auth() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="bg-input border-border"
-                    placeholder="Enter your email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -161,8 +136,6 @@ export default function Auth() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="bg-input border-border"
-                    placeholder="Create a password (at least 6 characters)"
-                    minLength={6}
                   />
                 </div>
                 <Button 
