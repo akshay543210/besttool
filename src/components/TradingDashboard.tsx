@@ -77,7 +77,7 @@ export function TradingDashboard() {
 
   // Calculate stats based on filtered trades using consistent P&L calculation
   const filteredStats = useMemo(() => {
-    if (filteredTrades.length === 0 || !activeAccount) {
+    if (filteredTrades.length === 0) {
       return {
         totalTrades: 0,
         wins: 0,
@@ -100,7 +100,7 @@ export function TradingDashboard() {
     // Calculate P&L for each trade using the consistent method
     const tradesWithPnL = filteredTrades.map(trade => ({
       ...trade,
-      calculatedPnL: calculatePnL(trade, activeAccount)
+      calculatedPnL: activeAccount ? calculatePnL(trade, activeAccount) : 0
     }));
 
     const wins = tradesWithPnL.filter(t => t.result.toLowerCase() === 'win');
