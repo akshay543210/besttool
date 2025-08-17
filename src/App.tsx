@@ -7,7 +7,6 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { SupabaseHealthCheck } from "@/components/SupabaseHealthCheck";
 import Index from "./pages/Index";
 import Stats from "./pages/Stats";
 import Calendar from "./pages/Calendar";
@@ -44,12 +43,6 @@ const App = () => (
                         </div>
                       </header>
                       <main className="flex-1 p-6">
-                        {/* Show health check in development */}
-                        {import.meta.env.DEV && (
-                          <div className="mb-6">
-                            <SupabaseHealthCheck />
-                          </div>
-                        )}
                         <Routes>
                           <Route path="/" element={<Index />} />
                           <Route path="/stats" element={<Stats />} />
