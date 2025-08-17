@@ -109,191 +109,281 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         session: formData.session,
         setup_tag: formData.session, // Keep for backward compatibility
         strategy_tag: formData.strategy_tag || null,
-        rr: formData.rr ? Number(formData.rr) : null,
-        result: formData.result,
-        notes: formData.notes || null,
-        risk_percentage: riskPercentage,
-        updated_at: new Date().toISOString(),
-      };
+        rr: formData.rr ? Number(formData.rr)<dyad-write path="src/components/TradingTable.tsx" description="Reverting to previous version of TradingTable">
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { cn } from "@/lib/utils"
+import { Edit, Trash2, Share, Image, Eye } from 'lucide-react'
+import { useTradeActions } from '@/hooks/useTradeActions'
+import { EditTradeModal } from './EditTradeModal'
+import type { Trade } from '@/hooks/useTrades'
+import { useNavigate } from 'react-router-dom'
+import { useAccounts } from '@/hooks/useAccounts'
 
-      const { error } = await supabase
-        .from('trades')
-        .update(updateData)
-        .eq('id', trade.id);
+interface TradingTableProps {
+  trades: Trade[]
+  onTradeUpdated: () => void
+}
 
-      if (error) throw error;
+export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
+  const { deleteTrade, shareTrade, viewImage, loading } = useTradeActions();
+  const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
+  const navigate = useNavigate();
+  const { getActiveAccount } = useAccounts();
+  const activeAccount = getActiveAccount();
 
-      toast({
-        title: "Trade Updated",
-        description: "Trade has been updated successfully.",
-      });
-
-      // Trigger a full refresh to recalculate account balance
-      onTradeUpdated();
-      onClose();
-    } catch (err) {
-      console.error('Error updating trade:', err);
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to update trade',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  // Calculate P&L for a single trade based on risk percentage and R:R ratio
+  const calculateTradePnL = (trade: Trade) => {
+    if (!activeAccount) return 0;
+    
+    // If trade has actual pnl_dollar value, use that
+    if (trade.pnl_dollar !== null && trade.pnl_dollar !== undefined) {
+      return Number(trade.pnl_dollar);
+    }
+    
+    // Calculate based on risk percentage and R:R ratio using starting balance
+    const riskPercentage = trade.risk_percentage || 1.0; // Default to 1% if not set
+    const riskAmount = activeAccount.starting_balance * (riskPercentage / 100);
+    
+    switch (trade.result.toLowerCase()) {
+      case 'win':
+        return riskAmount * (trade.rr || 1); // Win: risk * reward
+      case 'loss':
+        return -riskAmount; // Loss: -risk
+      default:
+        return 0; // Breakeven
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleEdit = (trade: Trade) => {
+    setEditingTrade(trade);
   };
 
-  // Calculate risk amount based on account starting balance and risk percentage
-  const calculateRiskAmount = () => {
-    if (!activeAccount) return 0;
-    const riskPercentage = parseFloat(formData.risk_percentage);
-    if (isNaN(riskPercentage)) return 0;
-    
-    // Using starting_balance instead of current_balance for consistent risk calculation
-    const riskAmount = (activeAccount.starting_balance * riskPercentage) / 100;
-    return Math.round(riskAmount * 100) / 100; // Round to 2 decimal places
+  const handleDelete = async (tradeId: string) => {
+    await deleteTrade(tradeId);
+    // Ensure account balance is recalculated after deletion
+    onTradeUpdated();
+  };
+
+  const handleShare = (trade: Trade) => {
+    shareTrade(trade);
+  };
+
+  const handleViewImage = (imageUrl: string) => {
+    viewImage(imageUrl);
+  };
+
+  const handleViewDetails = (tradeId: string) => {
+    navigate(`/review/${tradeId}`);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Trade</DialogTitle>
-        </DialogHeader>
+    <Card className="bg-card border-border">
+      <CardHeader>
+        <CardTitle className="text-foreground">Trading History</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border hover:bg-muted/50">
+                <TableHead className="text-muted-foreground">Date</TableHead>
+                <TableHead className="text-muted-foreground">Symbol</TableHead>
+                <TableHead className="text-muted-foreground">Side</TableHead>
+                <TableHead className="text-muted-foreground">Session</TableHead>
+                <TableHead className="text-muted-foreground">Risk %</TableHead>
+                <TableHead className="text-muted-foreground">R:R</TableHead>
+                <TableHead className="text-muted-foreground">Result</TableHead>
+                <TableHead className="text-muted-foreground">P&L</TableHead>
+                <TableHead className="text-muted-foreground">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {trades.map((trade, index) => {
+                const tradePnL = calculateTradePnL(trade);
+                return (
+                  <motion.tr
+                    key={trade.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.3 }}
+                    className="border-border hover:bg-muted/50 group"
+                  >
+                    <TableCell className="text-foreground">{new Date(trade.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-mono text-foreground font-medium">{trade.symbol || 'N/A'}</TableCell>
+                    <TableCell>
+                      {trade.side ? (
+                        <Badge 
+                          variant={trade.side === "LONG" ? "default" : "secondary"}
+                          className={`${
+                            trade.side === "LONG" 
+                              ? "bg-success text-success-foreground" 
+                              : "bg-destructive text-destructive-foreground"
+                          } transition-colors`}
+                        >
+                          {trade.side}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {trade.session ? (
+                        <Badge variant="outline" className="border-border text-muted-foreground">
+                          {trade.session}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {trade.risk_percentage ? `${trade.risk_percentage}%` : '1.0%'}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {trade.rr ? `1:${trade.rr}` : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          trade.result === "Win" ? "default" : 
+                          trade.result === "Loss" ? "destructive" : "secondary"
+                        }
+                        className={`${
+                          trade.result === "Win" 
+                            ? "bg-success text-success-foreground" 
+                            : trade.result === "Loss"
+                            ? "bg-destructive text-destructive-foreground"
+                            : "bg-muted text-muted-foreground"
+                        } transition-colors`}
+                      >
+                        {trade.result}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={cn(
+                      "font-semibold font-mono",
+                      tradePnL >= 0 ? "text-success" : "text-destructive"
+                    )}>
+                      {tradePnL !== 0 ? (
+                        <>
+                          {tradePnL > 0 ? '+' : ''}${Math.abs(tradePnL).toFixed(2)}
+                        </>
+                      ) : (
+                        '$0.00'
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 hover:bg-primary/10"
+                            onClick={() => handleViewDetails(trade.id)}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        </motion.div>
+                        
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 hover:bg-primary/10"
+                            onClick={() => handleEdit(trade)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        </motion.div>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-destructive/10"
+                                disabled={loading}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </motion.div>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Trade</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this trade? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDelete(trade.id)}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 hover:bg-blue-500/10"
+                            onClick={() => handleShare(trade)}
+                          >
+                            <Share className="h-3 w-3" />
+                          </Button>
+                        </motion.div>
+                        
+                        {trade.image_url && (
+                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 hover:bg-orange-500/10"
+                              onClick={() => handleViewImage(trade.image_url!)}
+                            >
+                              <Image className="h-3 w-3" />
+                            </Button>
+                          </motion.div>
+                        )}
+                      </div>
+                    </TableCell>
+                  </motion.tr>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => handleInputChange('date', e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="symbol">Symbol *</Label>
-              <Input
-                id="symbol"
-                value={formData.symbol}
-                onChange={(e) => handleInputChange('symbol', e.target.value.toUpperCase())}
-                placeholder="e.g., EURUSD, GOLD"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="side">Side *</Label>
-              <Select value={formData.side} onValueChange={(value) => handleInputChange('side', value)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select side" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LONG">LONG</SelectItem>
-                  <SelectItem value="SHORT">SHORT</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="session">Session *</Label>
-              <Select value={formData.session} onValueChange={(value) => handleInputChange('session', value)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select session" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Asia">Asia</SelectItem>
-                  <SelectItem value="London">London</SelectItem>
-                  <SelectItem value="New York">New York</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="strategy_tag">Strategy Tag</Label>
-              <Input
-                id="strategy_tag"
-                value={formData.strategy_tag}
-                onChange={(e) => handleInputChange('strategy_tag', e.target.value)}
-                placeholder="e.g., breakout, reversal"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="rr">Risk:Reward Ratio</Label>
-              <Input
-                id="rr"
-                type="number"
-                step="0.1"
-                value={formData.rr}
-                onChange={(e) => handleInputChange('rr', e.target.value)}
-                placeholder="2.0"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="risk_percentage">Risk Percentage (%) *</Label>
-              <Input
-                id="risk_percentage"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="100"
-                value={formData.risk_percentage}
-                onChange={(e) => handleInputChange('risk_percentage', e.target.value)}
-                placeholder="1.0"
-                required
-              />
-              {activeAccount && formData.risk_percentage && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Risk Amount: ${calculateRiskAmount().toFixed(2)}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="result">Result *</Label>
-              <Select value={formData.result} onValueChange={(value) => handleInputChange('result', value)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select result" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Win">Win</SelectItem>
-                  <SelectItem value="Loss">Loss</SelectItem>
-                  <SelectItem value="Breakeven">Breakeven</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {trades.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No trades found for the selected time period.</p>
           </div>
-
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Trade notes and observations..."
-              rows={3}
-            />
-          </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? 'Updating...' : 'Update Trade'}
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+        )}
+      </CardContent>
+      
+      <EditTradeModal
+        trade={editingTrade}
+        isOpen={!!editingTrade}
+        onClose={() => setEditingTrade(null)}
+        onTradeUpdated={onTradeUpdated}
+      />
+    </Card>
+  )
 }
