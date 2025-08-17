@@ -229,6 +229,15 @@ export function TradingDashboard() {
     ? (portfolioPnL / startingBalance) * 100 
     : 0;
 
+  // Debug log to see what values are being calculated
+  console.log('Dashboard values:', {
+    portfolioValue,
+    startingBalance,
+    portfolioPnL,
+    portfolioPnLPercentage,
+    filteredStats
+  });
+
   return <motion.div initial={{
     opacity: 0,
     y: 20
