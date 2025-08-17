@@ -383,7 +383,12 @@ export default function TradeReview() {
                   className="w-full h-auto rounded-lg border border-border"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.parentElement!.innerHTML = '<p class="text-muted-foreground text-center py-4">Failed to load image</p>';
+                    target.style.display = 'none';
+                    // Show error message
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<p class="text-muted-foreground text-center py-4">Failed to load image</p>';
+                    }
                   }}
                 />
               </div>
