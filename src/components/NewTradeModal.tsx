@@ -193,8 +193,6 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       setOpen(false);
       // Ensure account balance is recalculated after adding new trade
       onTradeAdded?.();
-      // Dispatch custom event for other components to refresh
-      window.dispatchEvent(new CustomEvent('dataUpdated'));
     } catch (error: any) {
       console.error('Error saving trade:', error);
       toast({

@@ -131,8 +131,6 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
       // Trigger a full refresh to recalculate account balance
       onTradeUpdated();
       onClose();
-      // Dispatch custom event for other components to refresh
-      window.dispatchEvent(new CustomEvent('dataUpdated'));
     } catch (err) {
       console.error('Error updating trade:', err);
       toast({

@@ -152,7 +152,6 @@ export function useTrades() {
         },
         () => {
           fetchTrades();
-          window.dispatchEvent(new CustomEvent('dataUpdated'));
         }
       )
       .subscribe();
@@ -168,19 +167,6 @@ export function useTrades() {
       fetchTrades();
     }
   }, [activeAccount?.id]);
-
-  // Listen for refresh events
-  useEffect(() => {
-    const handleRefresh = () => {
-      fetchTrades();
-    };
-
-    window.addEventListener('dataUpdated', handleRefresh);
-    
-    return () => {
-      window.removeEventListener('dataUpdated', handleRefresh);
-    };
-  }, [fetchTrades]);
 
   const calculatePnL = useCallback((trade: Trade, account?: Account): number => {
     if (!account) return 0;

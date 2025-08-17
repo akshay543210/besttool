@@ -63,14 +63,10 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
     await deleteTrade(tradeId);
     // Ensure account balance is recalculated after deletion
     onTradeUpdated();
-    // Dispatch custom event for other components to refresh
-    window.dispatchEvent(new CustomEvent('dataUpdated'));
   };
 
   const handleShare = (trade: Trade) => {
     shareTrade(trade);
-    // Dispatch custom event for other components to refresh
-    window.dispatchEvent(new CustomEvent('dataUpdated'));
   };
 
   const handleViewImage = (imageUrl: string) => {
@@ -273,17 +269,8 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
       <EditTradeModal
         trade={editingTrade}
         isOpen={!!editingTrade}
-        onClose={() => {
-          setEditingTrade(null);
-          // Refresh data when modal is closed
-          onTradeUpdated();
-          window.dispatchEvent(new CustomEvent('dataUpdated'));
-        }}
-        onTradeUpdated={() => {
-          // Refresh data when trade is updated
-          onTradeUpdated();
-          window.dispatchEvent(new CustomEvent('dataUpdated'));
-        }}
+        onClose={() => setEditingTrade(null)}
+        onTradeUpdated={onTradeUpdated}
       />
     </Card>
   )
