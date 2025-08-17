@@ -21,20 +21,18 @@ interface EquityChartProps {
 }
 
 export function EquityChart({ data, startingBalance }: EquityChartProps) {
-  // Format data for the chart with proper date formatting
-  const chartData = data.map((point) => ({
+  // Format data for the chart
+  const chartData = data.map((point, index) => ({
     ...point,
-    date: new Date(point.date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    }),
+    date: format(new Date(point.date), 'MMM dd'),
+    cumulative: point.value,
     displayValue: point.value >= 0 
       ? `+$${Math.abs(point.value).toFixed(2)}` 
       : `-$${Math.abs(point.value).toFixed(2)}`
   }));
 
   // Calculate min and max values for Y-axis scaling
-  const values = chartData.map(d => d.value);
+  const values = chartData.map(d => d.cumulative);
   const minValue = values.length > 0 ? Math.min(...values, 0) : 0;
   const maxValue = values.length > 0 ? Math.max(...values, 0) : 0;
   const yAxisPadding = Math.max(Math.abs(minValue), Math.abs(maxValue)) * 0.1 || 100;
@@ -83,7 +81,7 @@ export function EquityChart({ data, startingBalance }: EquityChartProps) {
               <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
               <Line
                 type="monotone"
-                dataKey="value"
+                dataKey="cumulative"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 dot={{ 

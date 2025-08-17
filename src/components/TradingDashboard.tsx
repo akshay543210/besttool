@@ -205,29 +205,21 @@ export function TradingDashboard() {
     };
   }, [filteredTrades, activeAccount, calculatePnL]);
 
-  // Generate equity curve data - this will now properly update with trades
+  // Generate equity curve data
   const equityData = useMemo(() => {
     if (!activeAccount || trades.length === 0) {
-      // Return initial data point at starting balance
-      return [{
-        date: new Date().toISOString(),
-        value: 0
-      }];
+      return [{ date: new Date().toISOString(), value: 0 }];
     }
 
-    // Sort all trades by date chronologically
+    // Sort all trades by date
     const sortedTrades = [...trades].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     
-    // Calculate cumulative P&L over time
     let runningTotal = 0;
-    const equityPoints = [{
-      date: sortedTrades[0].date,
-      value: 0
-    }];
+    const equityPoints = [{ date: sortedTrades[0].date, value: 0 }];
     
-    sortedTrades.forEach((trade, index) => {
+    sortedTrades.forEach(trade => {
       const pnl = calculatePnL(trade, activeAccount);
       runningTotal += pnl;
       
