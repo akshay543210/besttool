@@ -10,7 +10,7 @@ import {
   ReferenceLine
 } from "recharts";
 import { TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 
 interface EquityChartProps {
   data: Array<{
@@ -34,11 +34,18 @@ export function EquityChart({ data, startingBalance }: EquityChartProps) {
     }
     
     // For subsequent points, we show the cumulative balance
+    // Safely format the date
+    let displayDate = 'Invalid Date';
+    const dateObj = new Date(point.date);
+    if (isValid(dateObj)) {
+      displayDate = format(dateObj, 'MMM dd');
+    }
+    
     return {
       trade: index,
       date: point.date,
       balance: startingBalance + point.value,
-      displayDate: format(new Date(point.date), 'MMM dd')
+      displayDate: displayDate
     };
   });
 
@@ -87,7 +94,20 @@ export function EquityChart({ data, startingBalance }: EquityChartProps) {
                   color: 'hsl(var(--card-foreground))'
                 }}
                 formatter={(value) => [`$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Equity']}
-                labelFormatter={(label, data) => `Date: ${data[0]?.payload?.date !== 'Start' ? format(new Date(data[0]?.payload?.date), 'MMM dd, yyyy') : 'Start'}`}
+                labelFormatter={(label, data) => {
+                  const payload = data[0]?.payload;
+                  if (!payload) return 'Date: Unknown';
+                  
+                  if (payload.date === 'Start') {
+                    return 'Date: Start';
+                  }
+                  
+                  const dateObj = new Date(payload.date);
+                  if (isValid(dateObj)) {
+                    return `Date: ${format(dateObj, 'MMM dd, yyyy')}`;
+                  }
+                  return `Date: Invalid Date`;
+                }}
               />
               <ReferenceLine y={startingBalance} stroke="hsl(var(--border))" strokeDasharray="3 3" />
               <Line
