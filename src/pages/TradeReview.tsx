@@ -382,7 +382,8 @@ export default function TradeReview() {
                   alt="Trade chart screenshot"
                   className="w-full h-auto rounded-lg border border-border"
                   onError={(e) => {
-                    e.currentTarget.style.display = 'none';
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
                   }}
                 />
               </div>
