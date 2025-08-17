@@ -11,19 +11,19 @@ interface StatsCardProps {
 }
 
 export function StatsCard({ title, value, change, positive, icon, className }: StatsCardProps) {
-  // Special handling for PNL % to determine color based on actual value
-  const isPNLPercentage = title === "PNL %";
-  const isPNLValue = title === "PNL $";
+  // Special handling for PNL % and PNL $ to determine color based on actual value
+  const isFinancialMetric = title === "PNL %" || title === "PNL $";
   
-  // For PNL % and PNL $, determine positivity based on the actual value
+  // For financial metrics, determine positivity based on the actual value
   let isPositive = positive;
   let isNegative = false;
   
-  if (isPNLPercentage || isPNLValue) {
+  if (isFinancialMetric) {
     const valueStr = typeof value === 'string' ? value : value.toString();
-    const numericValue = parseFloat(valueStr.replace(/[^0-9.-]+/g, ""));
-    isPositive = !isNaN(numericValue) && numericValue >= 0;
-    isNegative = !isNaN(numericValue) && numericValue < 0;
+    // Extract numeric value, handling cases like "+$100.00" or "-$50.00"
+    const numericValue = parseFloat(valueStr.replace(/[^\d.-]/g, "")) || 0;
+    isPositive = numericValue >= 0;
+    isNegative = numericValue < 0;
   } else {
     // For other cards, use the passed positive prop or determine from value
     isPositive = typeof value === 'string' 
@@ -43,9 +43,9 @@ export function StatsCard({ title, value, change, positive, icon, className }: S
             <p className="text-sm text-muted-foreground mb-1 uppercase tracking-wide">{title}</p>
             <p className={cn(
               "text-2xl font-bold",
-              isPositive ? "text-success" : 
-              isNegative ? "text-destructive" : 
-              "text-foreground"
+              isFinancialMetric 
+                ? (isPositive ? "text-success" : "text-destructive")
+                : (isPositive ? "text-success" : isNegative ? "text-destructive" : "text-foreground")
             )}>
               {value}
             </p>
@@ -61,9 +61,9 @@ export function StatsCard({ title, value, change, positive, icon, className }: S
           {icon && (
             <div className={cn(
               "transition-colors duration-200",
-              isPositive ? "text-success" : 
-              isNegative ? "text-destructive" : 
-              "text-muted-foreground"
+              isFinancialMetric 
+                ? (isPositive ? "text-success" : "text-destructive")
+                : (isPositive ? "text-success" : isNegative ? "text-destructive" : "text-muted-foreground")
             )}>
               {icon}
             </div>
