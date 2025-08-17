@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Edit3, DollarSign, Target, TrendingUp, Calendar, Clock, FileText } from "lucide-react";
+import { ArrowLeft, Edit3, DollarSign, Target, TrendingUp, Calendar, Clock, FileText, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -370,7 +370,10 @@ export default function TradeReview() {
         >
           <Card className="bg-gradient-card shadow-card border-border">
             <CardHeader>
-              <CardTitle className="text-card-foreground">Chart Screenshot</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-card-foreground">
+                <ImageIcon className="h-5 w-5" />
+                Chart Screenshot
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="relative">
