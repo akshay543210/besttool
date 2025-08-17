@@ -11,14 +11,29 @@ interface StatsCardProps {
 }
 
 export function StatsCard({ title, value, change, positive, icon, className }: StatsCardProps) {
-  // Determine if the value is positive, negative, or zero for coloring
-  const isPositive = typeof value === 'string' 
-    ? (value.startsWith('+') || (parseFloat(value) || 0) > 0)
-    : value > 0;
+  // Special handling for PNL % to determine color based on actual value
+  const isPNLPercentage = title === "PNL %";
+  const isPNLValue = title === "PNL $";
   
-  const isNegative = typeof value === 'string' 
-    ? (value.startsWith('-') || (parseFloat(value) || 0) < 0)
-    : value < 0;
+  // For PNL % and PNL $, determine positivity based on the actual value
+  let isPositive = positive;
+  let isNegative = false;
+  
+  if (isPNLPercentage || isPNLValue) {
+    const valueStr = typeof value === 'string' ? value : value.toString();
+    const numericValue = parseFloat(valueStr.replace(/[^0-9.-]+/g, ""));
+    isPositive = !isNaN(numericValue) && numericValue >= 0;
+    isNegative = !isNaN(numericValue) && numericValue < 0;
+  } else {
+    // For other cards, use the passed positive prop or determine from value
+    isPositive = typeof value === 'string' 
+      ? (value.startsWith('+') || (parseFloat(value) || 0) > 0)
+      : value > 0;
+    
+    isNegative = typeof value === 'string' 
+      ? (value.startsWith('-') || (parseFloat(value) || 0) < 0)
+      : value < 0;
+  }
 
   return (
     <Card className={cn("bg-card border-border hover:bg-card/80 transition-all duration-200", className)}>

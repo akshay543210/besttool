@@ -11,23 +11,6 @@ import { TrendingUp, TrendingDown, Target, DollarSign, BarChart3, User, Twitter,
 import { Button } from '@/components/ui/button';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, subYears, isSameDay, isSameWeek, isSameMonth, isSameYear, format } from 'date-fns';
 
-interface FormattedTrade {
-  id: string;
-  date: string;
-  symbol: string;
-  side: "LONG" | "SHORT";
-  entry_price: number;
-  exit_price: number;
-  quantity: number;
-  setup_tag: string;
-  rr: number;
-  result: "Win" | "Loss" | "Breakeven";
-  pnl_dollar: number;
-  notes?: string;
-  image_url?: string;
-  commission: number;
-}
-
 export function TradingDashboard() {
   const [activeFilter, setActiveFilter] = useState('all');
   const {
@@ -232,23 +215,6 @@ export function TradingDashboard() {
     return equityPoints;
   }, [trades, activeAccount, calculatePnL]);
 
-  const formattedTrades: FormattedTrade[] = filteredTrades.map(trade => ({
-    id: trade.id,
-    date: new Date(trade.date).toLocaleDateString(),
-    symbol: trade.symbol || 'N/A',
-    side: trade.side as "LONG" | "SHORT" || 'LONG',
-    entry_price: Number(trade.entry_price) || 0,
-    exit_price: Number(trade.exit_price) || 0,
-    quantity: Number(trade.quantity) || 0,
-    setup_tag: trade.setup_tag || trade.session || 'N/A',
-    rr: Number(trade.rr) || 0,
-    result: trade.result as "Win" | "Loss" | "Breakeven" || 'Breakeven',
-    pnl_dollar: Number(trade.pnl_dollar) || 0,
-    notes: trade.notes,
-    image_url: trade.image_url,
-    commission: Number(trade.commission) || 0
-  }));
-
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">
         <div className="text-muted-foreground">Loading dashboard...</div>
@@ -259,6 +225,9 @@ export function TradingDashboard() {
   const portfolioValue = activeAccount ? activeAccount.current_balance : 0;
   const startingBalance = activeAccount ? activeAccount.starting_balance : 0;
   const portfolioPnL = activeAccount ? portfolioValue - startingBalance : 0;
+  const portfolioPnLPercentage = activeAccount && startingBalance > 0 
+    ? (portfolioPnL / startingBalance) * 100 
+    : 0;
 
   return <motion.div initial={{
     opacity: 0,
@@ -292,9 +261,12 @@ export function TradingDashboard() {
             <div className="text-sm text-muted-foreground">
               {activeAccount ? activeAccount.name : 'No Active Account'}
             </div>
-            {activeAccount && <div className={`text-sm font-medium ${portfolioPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
+            {activeAccount && (
+              <div className={`text-sm font-medium ${portfolioPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
                 P&L: {portfolioPnL >= 0 ? '+' : ''}${portfolioPnL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>}
+                ({portfolioPnLPercentage >= 0 ? '+' : ''}{portfolioPnLPercentage.toFixed(2)}%)
+              </div>
+            )}
           </div>
 
           {/* Social Links */}
@@ -404,7 +376,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.7
       }}>
-          <StatsCard title="PNL $" value={`${filteredStats.totalPnL > 0 ? '+' : ''}$${Math.abs(filteredStats.totalPnL).toFixed(2)}`} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL $" value={`${filteredStats.totalPnL > 0 ? '+' : ''}$${Math.abs(filteredStats.totalPnL).toFixed(2)}`} positive={filteredStats.totalPnL >= 0} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -416,7 +388,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 0.8
       }}>
-          <StatsCard title="PNL %" value={`${filteredStats.totalPnL > 0 ? '+' : ''}${activeAccount ? (filteredStats.totalPnL / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} icon={<BarChart3 className="w-5 h-5" />} />
+          <StatsCard title="PNL %" value={`${filteredStats.totalPnL > 0 ? '+' : ''}${activeAccount && activeAccount.starting_balance > 0 ? (filteredStats.totalPnL / activeAccount.starting_balance * 100).toFixed(2) : '0.00'}%`} positive={activeAccount && activeAccount.starting_balance > 0 ? (filteredStats.totalPnL / activeAccount.starting_balance) >= 0 : true} icon={<BarChart3 className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
@@ -440,7 +412,7 @@ export function TradingDashboard() {
       }} transition={{
         delay: 1.0
       }}>
-          <StatsCard title="BEST DAY" value={`${filteredStats.bestDayProfit > 0 ? '+' : ''}$${Math.abs(filteredStats.bestDayProfit).toFixed(2)}`} icon={<TrendingUp className="w-5 h-5" />} />
+          <StatsCard title="BEST DAY" value={`${filteredStats.bestDayProfit > 0 ? '+' : ''}$${Math.abs(filteredStats.bestDayProfit).toFixed(2)}`} positive={filteredStats.bestDayProfit >= 0} icon={<TrendingUp className="w-5 h-5" />} />
         </motion.div>
         
         <motion.div initial={{
