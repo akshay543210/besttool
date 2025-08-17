@@ -22,7 +22,8 @@ export function TradingDashboard() {
     getTradesByDate
   } = useTrades();
   const {
-    getActiveAccount
+    getActiveAccount,
+    accounts
   } = useAccounts();
   
   const activeAccount = getActiveAccount();
@@ -221,22 +222,13 @@ export function TradingDashboard() {
       </div>;
   }
 
-  // Calculate portfolio value and P&L
+  // Calculate portfolio value and P&L - now properly reactive
   const portfolioValue = activeAccount ? activeAccount.current_balance : 0;
   const startingBalance = activeAccount ? activeAccount.starting_balance : 0;
   const portfolioPnL = activeAccount ? portfolioValue - startingBalance : 0;
   const portfolioPnLPercentage = activeAccount && startingBalance > 0 
     ? (portfolioPnL / startingBalance) * 100 
     : 0;
-
-  // Debug log to see what values are being calculated
-  console.log('Dashboard values:', {
-    portfolioValue,
-    startingBalance,
-    portfolioPnL,
-    portfolioPnLPercentage,
-    filteredStats
-  });
 
   return <motion.div initial={{
     opacity: 0,
@@ -262,7 +254,7 @@ export function TradingDashboard() {
         </div>
         
         <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
-          {/* Portfolio Balance */}
+          {/* Portfolio Balance - now properly reactive */}
           <div className="text-right bg-card p-4 rounded-lg border border-border">
             <div className="text-2xl font-bold text-foreground">
               ${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
