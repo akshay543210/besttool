@@ -21,6 +21,7 @@ export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastNotificationTime, setLastNotificationTime] = useState<number>(0);
 
   const fetchAccounts = useCallback(async () => {
     if (!user) {
@@ -80,10 +81,15 @@ export function useAccounts() {
       // Notify other hooks that active account changed
       window.dispatchEvent(new CustomEvent('activeAccountChanged'));
       
-      toast({
-        title: "Account Created",
-        description: `${name} account created with $${startingBalance.toLocaleString()} starting balance.`,
-      });
+      // Show notification with rate limiting
+      const now = Date.now();
+      if (now - lastNotificationTime > 1000) { // Only show once per second
+        toast({
+          title: "Account Created",
+          description: `${name} account created with $${startingBalance.toLocaleString()} starting balance.`,
+        });
+        setLastNotificationTime(now);
+      }
 
       return data;
     } catch (err) {
@@ -107,10 +113,16 @@ export function useAccounts() {
       if (error) throw error;
 
       await fetchAccounts();
-      toast({
-        title: "Account Updated",
-        description: "Account details have been updated successfully.",
-      });
+      
+      // Show notification with rate limiting
+      const now = Date.now();
+      if (now - lastNotificationTime > 1000) { // Only show once per second
+        toast({
+          title: "Account Updated",
+          description: "Account details have been updated successfully.",
+        });
+        setLastNotificationTime(now);
+      }
     } catch (err) {
       console.error('Error updating account:', err);
       toast({
@@ -131,10 +143,16 @@ export function useAccounts() {
       if (error) throw error;
 
       await fetchAccounts();
-      toast({
-        title: "Account Deleted",
-        description: "Account has been deleted successfully.",
-      });
+      
+      // Show notification with rate limiting
+      const now = Date.now();
+      if (now - lastNotificationTime > 1000) { // Only show once per second
+        toast({
+          title: "Account Deleted",
+          description: "Account has been deleted successfully.",
+        });
+        setLastNotificationTime(now);
+      }
     } catch (err) {
       console.error('Error deleting account:', err);
       toast({
@@ -163,10 +181,15 @@ export function useAccounts() {
       // Notify other hooks that active account changed
       window.dispatchEvent(new CustomEvent('activeAccountChanged'));
       
-      toast({
-        title: "Active Account Changed",
-        description: "Active account has been updated.",
-      });
+      // Show notification with rate limiting
+      const now = Date.now();
+      if (now - lastNotificationTime > 1000) { // Only show once per second
+        toast({
+          title: "Active Account Changed",
+          description: "Active account has been updated.",
+        });
+        setLastNotificationTime(now);
+      }
     } catch (err) {
       console.error('Error setting active account:', err);
       toast({
