@@ -79,6 +79,7 @@ export function useAccounts() {
       
       // Notify other hooks that active account changed
       window.dispatchEvent(new CustomEvent('activeAccountChanged'));
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
       
       toast({
         title: "Account Created",
@@ -107,6 +108,7 @@ export function useAccounts() {
       if (error) throw error;
 
       await fetchAccounts();
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
       toast({
         title: "Account Updated",
         description: "Account details have been updated successfully.",
@@ -131,6 +133,7 @@ export function useAccounts() {
       if (error) throw error;
 
       await fetchAccounts();
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
       toast({
         title: "Account Deleted",
         description: "Account has been deleted successfully.",
@@ -162,6 +165,7 @@ export function useAccounts() {
       
       // Notify other hooks that active account changed
       window.dispatchEvent(new CustomEvent('activeAccountChanged'));
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
       
       toast({
         title: "Active Account Changed",
@@ -211,6 +215,7 @@ export function useAccounts() {
         () => {
           // Refetch accounts when any change occurs
           fetchAccounts();
+          window.dispatchEvent(new CustomEvent('dataUpdated'));
         }
       )
       .subscribe();
@@ -219,6 +224,21 @@ export function useAccounts() {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Listen for refresh events
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchAccounts();
+    };
+
+    window.addEventListener('dataUpdated', handleRefresh);
+    window.addEventListener('activeAccountChanged', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('dataUpdated', handleRefresh);
+      window.removeEventListener('activeAccountChanged', handleRefresh);
+    };
+  }, [fetchAccounts]);
 
   return {
     accounts,

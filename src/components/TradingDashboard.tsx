@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TimeFilter } from './TimeFilter';
 import { NewTradeModal } from './NewTradeModal';
@@ -39,10 +39,34 @@ export function TradingDashboard() {
     getTradesByDate
   } = useTrades();
   const {
-    getActiveAccount
+    getActiveAccount,
+    refetchAccounts
   } = useAccounts();
   
   const activeAccount = getActiveAccount();
+
+  // Auto-refresh when data changes
+  useEffect(() => {
+    const handleRefresh = () => {
+      refetchTrades();
+      refetchAccounts();
+    };
+
+    // Listen for custom refresh events
+    window.addEventListener('dataUpdated', handleRefresh);
+    
+    // Also refresh on focus to get latest data
+    const handleFocus = () => {
+      handleRefresh();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('dataUpdated', handleRefresh);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refetchTrades, refetchAccounts]);
 
   const filteredTrades = useMemo(() => {
     if (!trades) return [];
@@ -478,7 +502,12 @@ export function TradingDashboard() {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">
-        <NewTradeModal onTradeAdded={refetchTrades} />
+        <NewTradeModal onTradeAdded={() => {
+          // Trigger refresh after adding trade
+          refetchTrades();
+          refetchAccounts();
+          window.dispatchEvent(new CustomEvent('dataUpdated'));
+        }} />
       </div>
 
       {/* Trade Table */}
@@ -491,7 +520,12 @@ export function TradingDashboard() {
     }} transition={{
       delay: 1.3
     }}>
-        <TradingTable trades={filteredTrades} onTradeUpdated={refetchTrades} />
+        <TradingTable trades={filteredTrades} onTradeUpdated={() => {
+          // Trigger refresh after updating/deleting trade
+          refetchTrades();
+          refetchAccounts();
+          window.dispatchEvent(new CustomEvent('dataUpdated'));
+        }} />
       </motion.div>
 
       {/* Demo Notice */}
