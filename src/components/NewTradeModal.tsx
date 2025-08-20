@@ -154,9 +154,9 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         imageUrl = await uploadImage(imageFile);
         if (!imageUrl) {
           toast({
-            title: "Upload Error",
+            title: "Upload Warning",
             description: "Failed to upload image. Trade will be saved without image.",
-            variant: "destructive",
+            variant: "default",
           });
           // Continue without image instead of failing completely
         }
@@ -184,10 +184,16 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         throw new Error(error.message);
       }
 
-      toast({
-        title: "Success",
-        description: "Trade logged successfully",
-      });
+      // Only show success toast with rate limiting
+      const lastToastTime = localStorage.getItem('lastTradeToastTime');
+      const now = Date.now();
+      if (!lastToastTime || now - parseInt(lastToastTime) > 3000) {
+        toast({
+          title: "Success",
+          description: "Trade logged successfully",
+        });
+        localStorage.setItem('lastTradeToastTime', now.toString());
+      }
       
       resetForm();
       setOpen(false);

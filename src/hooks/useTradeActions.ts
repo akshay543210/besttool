@@ -17,10 +17,16 @@ export function useTradeActions() {
 
       if (error) throw error;
 
-      toast({
-        title: "Trade Deleted",
-        description: "Trade has been deleted successfully.",
-      });
+      // Only show success toast with rate limiting
+      const lastToastTime = localStorage.getItem('lastTradeToastTime');
+      const now = Date.now();
+      if (!lastToastTime || now - parseInt(lastToastTime) > 3000) {
+        toast({
+          title: "Trade Deleted",
+          description: "Trade has been deleted successfully.",
+        });
+        localStorage.setItem('lastTradeToastTime', now.toString());
+      }
     } catch (err) {
       console.error('Error deleting trade:', err);
       toast({
@@ -45,20 +51,34 @@ export function useTradeActions() {
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Copied to Clipboard",
-          description: "Trade details copied to clipboard.",
-        });
+        
+        // Only show success toast with rate limiting
+        const lastToastTime = localStorage.getItem('lastTradeToastTime');
+        const now = Date.now();
+        if (!lastToastTime || now - parseInt(lastToastTime) > 3000) {
+          toast({
+            title: "Copied to Clipboard",
+            description: "Trade details copied to clipboard.",
+          });
+          localStorage.setItem('lastTradeToastTime', now.toString());
+        }
       }
     } catch (err) {
       // Final fallback: try copying to clipboard
       try {
         const shareText = `${trade.side || 'Trade'} ${trade.symbol || ''} - ${trade.result} (${trade.rr ? `1:${trade.rr}` : 'N/A'} R:R)`.trim();
         await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Copied to Clipboard", 
-          description: "Trade details copied to clipboard.",
-        });
+        
+        // Only show success toast with rate limiting
+        const lastToastTime = localStorage.getItem('lastTradeToastTime');
+        const now = Date.now();
+        if (!lastToastTime || now - parseInt(lastToastTime) > 3000) {
+          toast({
+            title: "Copied to Clipboard", 
+            description: "Trade details copied to clipboard.",
+          });
+          localStorage.setItem('lastTradeToastTime', now.toString());
+        }
       } catch (clipboardErr) {
         console.error('Error sharing/copying trade:', err);
         toast({

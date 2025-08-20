@@ -83,7 +83,7 @@ export function useAccounts() {
       
       // Show notification with rate limiting
       const now = Date.now();
-      if (now - lastNotificationTime > 1000) { // Only show once per second
+      if (now - lastNotificationTime > 3000) { // Only show once per 3 seconds
         toast({
           title: "Account Created",
           description: `${name} account created with $${startingBalance.toLocaleString()} starting balance.`,
@@ -114,14 +114,16 @@ export function useAccounts() {
 
       await fetchAccounts();
       
-      // Show notification with rate limiting
-      const now = Date.now();
-      if (now - lastNotificationTime > 1000) { // Only show once per second
-        toast({
-          title: "Account Updated",
-          description: "Account details have been updated successfully.",
-        });
-        setLastNotificationTime(now);
+      // Only show notification for user-initiated updates (not automatic balance updates)
+      if (updates.name || updates.starting_balance || updates.risk_per_trade) {
+        const now = Date.now();
+        if (now - lastNotificationTime > 3000) { // Only show once per 3 seconds
+          toast({
+            title: "Account Updated",
+            description: "Account details have been updated successfully.",
+          });
+          setLastNotificationTime(now);
+        }
       }
     } catch (err) {
       console.error('Error updating account:', err);
@@ -146,7 +148,7 @@ export function useAccounts() {
       
       // Show notification with rate limiting
       const now = Date.now();
-      if (now - lastNotificationTime > 1000) { // Only show once per second
+      if (now - lastNotificationTime > 3000) { // Only show once per 3 seconds
         toast({
           title: "Account Deleted",
           description: "Account has been deleted successfully.",
@@ -183,7 +185,7 @@ export function useAccounts() {
       
       // Show notification with rate limiting
       const now = Date.now();
-      if (now - lastNotificationTime > 1000) { // Only show once per second
+      if (now - lastNotificationTime > 3000) { // Only show once per 3 seconds
         toast({
           title: "Active Account Changed",
           description: "Active account has been updated.",

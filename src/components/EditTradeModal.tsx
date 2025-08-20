@@ -123,10 +123,16 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
 
       if (error) throw error;
 
-      toast({
-        title: "Trade Updated",
-        description: "Trade has been updated successfully.",
-      });
+      // Only show success toast with rate limiting
+      const lastToastTime = localStorage.getItem('lastTradeToastTime');
+      const now = Date.now();
+      if (!lastToastTime || now - parseInt(lastToastTime) > 3000) {
+        toast({
+          title: "Trade Updated",
+          description: "Trade has been updated successfully.",
+        });
+        localStorage.setItem('lastTradeToastTime', now.toString());
+      }
 
       // Trigger a full refresh to recalculate account balance
       onTradeUpdated();
