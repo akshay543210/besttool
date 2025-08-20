@@ -53,11 +53,12 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
     if (!user) return null;
     
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Create unique file name
+      const fileName = `${user.id}-${Date.now()}-${file.name}`;
       
+      // Upload to storage
       const { error: uploadError } = await supabase.storage
-        .from('screenshots')
+        .from("screenshots")
         .upload(fileName, file);
 
       if (uploadError) {
@@ -70,8 +71,9 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         return null;
       }
 
+      // Get public URL
       const { data } = supabase.storage
-        .from('screenshots')
+        .from("screenshots")
         .getPublicUrl(fileName);
 
       return data.publicUrl;

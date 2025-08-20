@@ -74,25 +74,47 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
 
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('screenshots')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error('Error uploading image:', uploadError);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to upload images",
+          variant: "destructive",
+        });
         return null;
       }
 
+      // Create unique file name
+      const fileName = `${user.id}-${Date.now()}-${file.name}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("screenshots")
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        toast({
+          title: "Upload Error",
+          description: `Failed to upload image: ${uploadError.message}`,
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Get public URL
       const { data } = supabase.storage
-        .from('screenshots')
+        .from("screenshots")
         .getPublicUrl(fileName);
 
       return data.publicUrl;
     } catch (error) {
-      console.error('Error in uploadImage:', error);
+      console.error("Error in uploadImage:", error);
+      toast({
+        title: "Upload Error",
+        description: "An unexpected error occurred while uploading the image",
+        variant: "destructive",
+      });
       return null;
     }
   };
@@ -139,7 +161,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
           title: "Error",
           description: "R:R ratio must be a positive number",
           variant: "destructive",
-        });
+      });
         return;
       }
     }
