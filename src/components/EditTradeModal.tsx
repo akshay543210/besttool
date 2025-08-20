@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAccounts } from '@/hooks/useAccounts';
 import type { Trade } from '@/hooks/useTrades';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 interface EditTradeModalProps {
   trade: Trade | null;
@@ -35,6 +36,10 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
     notes: '',
     risk_percentage: '',
   });
+  
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (trade) {
@@ -49,8 +54,48 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         notes: trade.notes || '',
         risk_percentage: trade.risk_percentage?.toString() || '1.0',
       });
+      setExistingImageUrl(trade.image_url || null);
+      setImageFile(null);
+      setImagePreview(null);
     }
   }, [trade]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('screenshots')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError);
+        return null;
+      }
+
+      const { data } = supabase.storage
+        .from('screenshots')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error in uploadImage:', error);
+      return null;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +146,22 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
 
     try {
       setLoading(true);
+      
+      let imageUrl = existingImageUrl;
+      
+      // Upload new image if provided
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+        if (!imageUrl) {
+          toast({
+            title: "Error",
+            description: "Failed to upload image",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
 
       const updateData = {
         date: new Date(formData.date).toISOString(),
@@ -112,6 +173,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         rr: formData.rr ? Number(formData.rr) : null,
         result: formData.result,
         notes: formData.notes || null,
+        image_url: imageUrl, // Include image URL in update
         risk_percentage: riskPercentage,
         updated_at: new Date().toISOString(),
       };
@@ -278,6 +340,69 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
               placeholder="Trade notes and observations..."
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="screenshot">Screenshot</Label>
+            <div className="border-2 border-dashed border-border rounded-lg p-4">
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Trade screenshot preview"
+                    className="max-h-40 mx-auto rounded"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview(null);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : existingImageUrl ? (
+                <div className="relative">
+                  <img
+                    src={existingImageUrl}
+                    alt="Existing trade screenshot"
+                    className="max-h-40 mx-auto rounded"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => {
+                      setExistingImageUrl(null);
+                      setImageFile(null);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label htmlFor="screenshot" className="cursor-pointer">
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                    <span className="text-sm text-muted-foreground">
+                      Click to upload screenshot
+                    </span>
+                  </div>
+                  <input
+                    id="screenshot"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">

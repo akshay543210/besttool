@@ -59,6 +59,7 @@ export default function TradeReview() {
       if (tradeError) throw tradeError;
       
       setTrade(tradeData);
+      console.log('Fetched trade data:', tradeData); // Debug log
 
       // Fetch strategy count if strategy_tag exists
       if (tradeData.strategy_tag) {
@@ -391,6 +392,7 @@ export default function TradeReview() {
                   className="w-full h-auto rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => setImageDialogOpen(true)}
                   onError={(e) => {
+                    console.error('Error loading image:', e);
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     // Show error message

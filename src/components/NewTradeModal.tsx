@@ -62,6 +62,11 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
 
       if (uploadError) {
         console.error('Error uploading image:', uploadError);
+        toast({
+          title: "Upload Error",
+          description: `Failed to upload image: ${uploadError.message}`,
+          variant: "destructive",
+        });
         return null;
       }
 
@@ -72,6 +77,11 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       return data.publicUrl;
     } catch (error) {
       console.error('Error in uploadImage:', error);
+      toast({
+        title: "Upload Error",
+        description: "An unexpected error occurred while uploading the image",
+        variant: "destructive",
+      });
       return null;
     }
   };
@@ -175,7 +185,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
           rr: formData.rr ? Number(formData.rr) : null,
           result: formData.result,
           notes: formData.notes || null,
-          image_url: imageUrl,
+          image_url: imageUrl, // Store the image URL
           risk_percentage: riskPercentage,
           updated_at: new Date().toISOString(),
         });
