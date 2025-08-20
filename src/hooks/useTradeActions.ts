@@ -91,6 +91,7 @@ export function useTradeActions() {
   };
 
   const viewImage = (imageUrl: string) => {
+    // Try to open in a new tab/window
     window.open(imageUrl, '_blank');
   };
 

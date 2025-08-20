@@ -70,6 +70,7 @@ export function TradingTable({ trades, onTradeUpdated }: TradingTableProps) {
   };
 
   const handleViewImage = (imageUrl: string) => {
+    // Try to open in modal first, fallback to new tab
     viewImage(imageUrl);
   };
 
