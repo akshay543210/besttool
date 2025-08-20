@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Upload, X } from 'lucide-react';
+import { Plus, Upload, X, Image as ImageIcon } from 'lucide-react';
 
 interface NewTradeModalProps {
   onTradeAdded?: () => void;
@@ -399,7 +399,7 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
               ) : (
                 <label htmlFor="screenshot" className="cursor-pointer">
                   <div className="flex flex-col items-center justify-center py-4">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                    <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
                     <span className="text-sm text-muted-foreground">
                       Click to upload screenshot
                     </span>

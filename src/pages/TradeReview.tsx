@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Edit3, DollarSign, Target, TrendingUp, Calendar, Clock, FileText, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Edit3, DollarSign, Target, TrendingUp, Calendar, Clock, FileText, Image as ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,13 @@ import { motion } from "framer-motion";
 import type { Trade } from "@/hooks/useTrades";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function TradeReview() {
   const { tradeId } = useParams<{ tradeId: string }>();
@@ -26,6 +33,7 @@ export default function TradeReview() {
   const [trade, setTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(true);
   const [strategyCount, setStrategyCount] = useState(0);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!tradeId || !user) return;
@@ -380,7 +388,8 @@ export default function TradeReview() {
                 <img
                   src={trade.image_url}
                   alt="Trade chart screenshot"
-                  className="w-full h-auto rounded-lg border border-border"
+                  className="w-full h-auto rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setImageDialogOpen(true)}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
@@ -396,6 +405,25 @@ export default function TradeReview() {
           </Card>
         </motion.div>
       )}
+
+      {/* Image Modal Dialog */}
+      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-4 border-b border-border">
+            <DialogTitle>Trade Screenshot</DialogTitle>
+            <DialogDescription>Click outside or press ESC to close</DialogDescription>
+          </DialogHeader>
+          <div className="p-4 flex items-center justify-center max-h-[80vh] overflow-hidden">
+            {trade?.image_url && (
+              <img
+                src={trade.image_url}
+                alt="Trade chart screenshot"
+                className="max-h-[70vh] w-auto object-contain rounded-lg"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
