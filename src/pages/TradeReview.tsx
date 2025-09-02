@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import type { Trade } from "@/hooks/useTrades";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { cn } from "@/lib/utils";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,7 @@ export default function TradeReview() {
       
       setTrade(tradeData);
       console.log('Fetched trade data:', tradeData); // Debug log
+      console.log('Image URL from trade:', tradeData.image_url); // Debug log for image URL
 
       // Fetch strategy count if strategy_tag exists
       if (tradeData.strategy_tag) {
@@ -385,24 +387,12 @@ export default function TradeReview() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="relative">
-                <img
-                  src={trade.image_url}
-                  alt="Trade chart screenshot"
-                  className="w-full h-auto rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setImageDialogOpen(true)}
-                  onError={(e) => {
-                    console.error('Error loading image:', e);
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    // Show error message
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = '<p class="text-muted-foreground text-center py-4">Failed to load image</p>';
-                    }
-                  }}
-                />
-              </div>
+              <ImageWithFallback
+                src={trade.image_url}
+                alt="Trade chart screenshot"
+                className="w-full h-auto rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setImageDialogOpen(true)}
+              />
             </CardContent>
           </Card>
         </motion.div>
@@ -417,7 +407,7 @@ export default function TradeReview() {
           </DialogHeader>
           <div className="p-4 flex items-center justify-center max-h-[80vh] overflow-hidden">
             {trade?.image_url && (
-              <img
+              <ImageWithFallback
                 src={trade.image_url}
                 alt="Trade chart screenshot"
                 className="max-h-[70vh] w-auto object-contain rounded-lg"

@@ -50,19 +50,26 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
-    if (!user) return null;
+    if (!user) {
+      console.error('No user found for image upload');
+      return null;
+    }
     
     try {
+      console.log('Starting image upload for user:', user.id);
+      console.log('File details:', { name: file.name, size: file.size, type: file.type });
+      
       // Create unique file name
       const fileName = `${user.id}-${Date.now()}-${file.name}`;
+      console.log('Generated filename:', fileName);
       
       // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from("screenshots")
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("trade-screenshots")
         .upload(fileName, file);
 
       if (uploadError) {
-        console.error('Error uploading image:', uploadError);
+        console.error('Upload error details:', uploadError);
         toast({
           title: "Upload Error",
           description: `Failed to upload image: ${uploadError.message}`,
@@ -71,12 +78,15 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
         return null;
       }
 
+      console.log('Upload successful:', uploadData);
+      
       // Get public URL
-      const { data } = supabase.storage
-        .from("screenshots")
+      const { data: urlData } = supabase.storage
+        .from("trade-screenshots")
         .getPublicUrl(fileName);
 
-      return data.publicUrl;
+      console.log('Generated public URL:', urlData.publicUrl);
+      return urlData.publicUrl;
     } catch (error) {
       console.error('Error in uploadImage:', error);
       toast({
@@ -163,17 +173,25 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       let imageUrl = null;
       
       if (imageFile) {
+        console.log('Image file selected, attempting upload...');
         imageUrl = await uploadImage(imageFile);
+        console.log('Upload result:', imageUrl);
         if (!imageUrl) {
+          console.error('Image upload failed, proceeding without image');
           toast({
             title: "Upload Warning",
             description: "Failed to upload image. Trade will be saved without image.",
             variant: "default",
           });
           // Continue without image instead of failing completely
+        } else {
+          console.log('Image uploaded successfully:', imageUrl);
         }
+      } else {
+        console.log('No image file selected');
       }
 
+      console.log('Saving trade with image_url:', imageUrl);
       const { error } = await supabase
         .from('trades')
         .insert({
@@ -195,6 +213,8 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       if (error) {
         throw new Error(error.message);
       }
+
+      console.log('Trade saved successfully with image_url:', imageUrl);
 
       // Only show success toast with rate limiting
       const lastToastTime = localStorage.getItem('lastTradeToastTime');

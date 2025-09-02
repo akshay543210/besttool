@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ImageDisplayFixComponent } from "@/components/ImageDisplayFixComponent"
 
 const Help = () => {
   return (
@@ -22,8 +23,26 @@ const Help = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="bg-gradient-card shadow-card border-border">
+        <CardHeader>
+          <CardTitle className="text-card-foreground">Troubleshooting</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4 text-muted-foreground">
+            <p>If you're experiencing issues with image display in trade reviews:</p>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li>Images may not display if storage policies are incorrectly configured</li>
+              <li>Use the tool below to fix image display policies</li>
+              <li>This will ensure images uploaded to the trade-screenshots bucket can be viewed</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ImageDisplayFixComponent />
     </div>
-  )
+ )
 }
 
 export default Help

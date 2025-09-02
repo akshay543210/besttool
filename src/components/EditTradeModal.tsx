@@ -76,6 +76,7 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) {
+        console.error('No authenticated user found for image upload');
         toast({
           title: "Authentication Error",
           description: "You must be logged in to upload images",
@@ -84,16 +85,20 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         return null;
       }
 
+      console.log('Starting image upload for user:', user.id);
+      console.log('File details:', { name: file.name, size: file.size, type: file.type });
+
       // Create unique file name
       const fileName = `${user.id}-${Date.now()}-${file.name}`;
+      console.log('Generated filename:', fileName);
 
       // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from("screenshots")
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("trade-screenshots")
         .upload(fileName, file);
 
       if (uploadError) {
-        console.error("Upload error:", uploadError);
+        console.error("Upload error details:", uploadError);
         toast({
           title: "Upload Error",
           description: `Failed to upload image: ${uploadError.message}`,
@@ -102,12 +107,15 @@ export function EditTradeModal({ trade, isOpen, onClose, onTradeUpdated }: EditT
         return null;
       }
 
+      console.log('Upload successful:', uploadData);
+
       // Get public URL
-      const { data } = supabase.storage
-        .from("screenshots")
+      const { data: urlData } = supabase.storage
+        .from("trade-screenshots")
         .getPublicUrl(fileName);
 
-      return data.publicUrl;
+      console.log('Generated public URL:', urlData.publicUrl);
+      return urlData.publicUrl;
     } catch (error) {
       console.error("Error in uploadImage:", error);
       toast({

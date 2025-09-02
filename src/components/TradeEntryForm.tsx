@@ -50,23 +50,40 @@ export function TradeEntryForm({ onSuccess, defaultSession, onTradeAdded }: Trad
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!user) return null;
     
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('screenshots')
-      .upload(fileName, file);
+    try {
+      // Create unique file name with consistent format
+      const fileName = `${user.id}-${Date.now()}-${file.name}`;
+      
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('trade-screenshots')
+        .upload(fileName, file);
 
-    if (uploadError) {
-      console.error('Error uploading image:', uploadError);
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError);
+        toast({
+          title: "Upload Error",
+          description: `Failed to upload image: ${uploadError.message}`,
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('trade-screenshots')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error in uploadImage:', error);
+      toast({
+        title: "Upload Error",
+        description: "An unexpected error occurred while uploading the image",
+        variant: "destructive",
+      });
       return null;
     }
-
-    const { data } = supabase.storage
-      .from('screenshots')
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

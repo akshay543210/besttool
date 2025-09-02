@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, TrendingUp, Target, Clock } from 'lucide-react';
+import { ImageWithFallback } from '@/components/ImageWithFallback';
 
 interface PublicTrade {
   id: string;
@@ -42,6 +43,8 @@ const PublicTrade = () => {
         if (error) throw error;
 
         setTrade(data);
+        console.log('Public trade data loaded:', data);
+        console.log('Public trade image URL:', data.image_url);
       } catch (err) {
         console.error('Error fetching public trade:', err);
         setError('Trade not found or not publicly shared');
@@ -164,8 +167,8 @@ const PublicTrade = () => {
                 <div className="space-y-2">
                   <h3 className="font-medium text-sm text-muted-foreground">Trade Screenshot</h3>
                   <div className="rounded-lg overflow-hidden border">
-                    <img 
-                      src={trade.image_url} 
+                    <ImageWithFallback
+                      src={trade.image_url}
                       alt="Trade screenshot"
                       className="w-full h-auto"
                     />
