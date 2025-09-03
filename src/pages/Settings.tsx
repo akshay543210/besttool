@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useAccounts } from "@/hooks/useAccounts"
 import { Plus, Trash2, DollarSign, TrendingUp, Settings as SettingsIcon } from "lucide-react"
-import { ImageDisplayFixComponent } from "@/components/ImageDisplayFixComponent"
 
 const Settings = () => {
   const { accounts, loading, createAccount, updateAccount, deleteAccount, setActiveAccount, getActiveAccount } = useAccounts()
@@ -328,9 +327,6 @@ const Settings = () => {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Image Display Fix Component */}
-      <ImageDisplayFixComponent />
     </div>
   )
 }

@@ -192,6 +192,16 @@ export function NewTradeModal({ onTradeAdded }: NewTradeModalProps) {
       }
 
       console.log('Saving trade with image_url:', imageUrl);
+      console.log('Form data:', {
+        user_id: user.id,
+        account_id: activeAccount.id,
+        symbol: formData.symbol,
+        side: formData.side,
+        session: formData.session,
+        result: formData.result,
+        image_url: imageUrl
+      });
+      
       const { error } = await supabase
         .from('trades')
         .insert({
