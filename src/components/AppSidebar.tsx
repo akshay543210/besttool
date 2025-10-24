@@ -123,7 +123,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <a href="https://x.com/free_propfirm?s=09" target="_blank" rel="noopener noreferrer" className="hover:bg-sidebar-accent/50">
+                    <a href="https://x.com/propfirm_forex" target="_blank" rel="noopener noreferrer" className="hover:bg-sidebar-accent/50">
                       <Twitter className="w-4 h-4" />
                       <span>Twitter</span>
                     </a>
