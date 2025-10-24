@@ -273,7 +273,7 @@ export function TradingDashboard() {
           {/* Social Links */}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>
-              <a href="https://x.com/free_propfirm?s=09" target="_blank" rel="noopener noreferrer">
+              <a href="https://x.com/propfirm_forex" target="_blank" rel="noopener noreferrer">
                 <Twitter className="w-4 h-4" />
               </a>
             </Button>
